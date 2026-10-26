@@ -71,9 +71,22 @@ try {
   closeSync(lock);
   const { default: postgres } = await import("postgres");
   const db = postgres(database, { max: 1, connect_timeout: 5 });
-  try { await db`SELECT 1`; }
+  let databaseRole;
+  try {
+    const rows = await db`
+      SELECT current_user AS role_name, current_database() AS database_name,
+             rolsuper, rolbypassrls
+      FROM pg_roles
+      WHERE rolname = current_user
+    `;
+    if (rows.length === 1) databaseRole = rows[0];
+  }
   catch { throw new Error("Local test database is unavailable; start the local test stack first"); }
   finally { await db.end({ timeout: 1 }); }
+  if (databaseRole?.role_name !== "wedding_app" || databaseRole.database_name !== "wedding_test"
+      || databaseRole.rolsuper !== false || databaseRole.rolbypassrls !== false) {
+    throw new Error("TEST_DATABASE_URL must connect as restricted wedding_app to wedding_test");
+  }
   const e2e = process.argv.includes("--serve-e2e");
   const port = e2e ? 3200 : 3100;
   const origin = `http://127.0.0.1:${port}`;

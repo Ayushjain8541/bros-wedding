@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, rmSync, mkdirSync, copyFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -83,6 +83,34 @@ describe("private operator seed", () => {
 });
 
 describe("local test server guard", () => {
+  // A subprocess fixture replaces only the external database transport. The runner's
+  // URL checks, role decision, launch boundary and safe error handling stay real.
+  it.each([
+    { role_name: "postgres", database_name: "wedding_test", rolsuper: false, rolbypassrls: false },
+    { role_name: "wedding_app", database_name: "wedding_test", rolsuper: true, rolbypassrls: false },
+    { role_name: "wedding_app", database_name: "wedding_test", rolsuper: false, rolbypassrls: true },
+    { role_name: "wedding_app", database_name: "other_test", rolsuper: false, rolbypassrls: false },
+  ])("refuses unsafe actual database identity %j before either child starts", (identity) => {
+    const directory = mkdtempSync(join(tmpdir(), "wedding-harness-"));
+    const marker = join(directory, "server-started");
+    try {
+      mkdirSync(join(directory, "scripts"));
+      mkdirSync(join(directory, "node_modules/postgres"), { recursive: true });
+      mkdirSync(join(directory, "node_modules/next/dist/bin"), { recursive: true });
+      copyFileSync("scripts/test-integration.mjs", join(directory, "scripts/test-integration.mjs"));
+      writeFileSync(join(directory, "node_modules/postgres/package.json"), JSON.stringify({ type: "module", exports: "./index.mjs" }));
+      writeFileSync(join(directory, "node_modules/postgres/index.mjs"), `export default () => Object.assign(async () => [JSON.parse(process.env.TEST_ROLE_ROW)], {end: async () => {}});`);
+      writeFileSync(join(directory, "node_modules/next/dist/bin/next"), `require("node:fs").writeFileSync(process.env.TEST_LAUNCH_MARKER, "started");`);
+      const result = spawnSync(process.execPath, ["scripts/test-integration.mjs"], {
+        cwd: directory, encoding: "utf8", timeout: 4000,
+        env: { ...process.env, TEST_DATABASE_URL: "postgres://wedding_app:synthetic-secret@127.0.0.1:5432/wedding_test", TEST_DATABASE_ADMIN_URL: "", TEST_ROLE_ROW: JSON.stringify(identity), TEST_LAUNCH_MARKER: marker },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr.trim()).toBe("TEST_DATABASE_URL must connect as restricted wedding_app to wedding_test");
+      expect(result.stderr).not.toContain("synthetic-secret");
+      expect(existsSync(marker)).toBe(false);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
   it.each([undefined, "postgres://test:test@example.com/wedding_test", "postgres://test:test@127.0.0.1/production"])("refuses unsafe integration database %s", (database) => {
     const result = spawnSync(process.execPath, ["scripts/test-integration.mjs"], {
       env: { ...process.env, TEST_DATABASE_URL: database ?? "" }, encoding: "utf8",
