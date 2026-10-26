@@ -1,0 +1,15 @@
+project_id = "private-wedding"
+[api]
+# Wedding records are deliberately absent from the public Data API.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+[db]
+major_version = 17
+[db.migrations]
+schema_paths = ["./schemas/*.sql"]
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+[storage]
+enabled = true
+file_size_limit = "10MiB"
