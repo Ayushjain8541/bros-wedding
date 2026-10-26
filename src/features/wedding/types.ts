@@ -1,0 +1,42 @@
+export type Locale = "en" | "hi";
+export type GroupId = "group-1" | "group-2";
+export type EventId = "mehendi" | "brides-mayara" | "haldi" | "grooms-mayara"
+  | "reception" | "baraat" | "phere-sajjan-goth" | "closing-dinner";
+export type TimeWindow = "before-noon" | "noon-5pm" | "5-9pm" | "after-9pm";
+export type Contact = { fullName: string; whatsapp: string };
+export type Travel = { arrivalDate: string; arrivalWindow: TimeWindow;
+  departureDate: string; departureWindow: TimeWindow };
+export type Song = { name: string; artist: string; url?: string };
+export type AcceptInput = { decision: "accept"; contact: Contact; guestNames: string[];
+  eventIds: EventId[]; travel: Travel; song?: Song; questions?: string };
+export type DeclineInput = { decision: "decline"; contact: Contact; note?: string };
+export type RsvpInput = AcceptInput | DeclineInput;
+export type ValidatedRsvp = RsvpInput; // returned only by runtime validation; phone normalized
+export type WeddingEvent = { id: EventId; startAt: string; endAt: string | null;
+  title: Record<Locale, string>; description: Record<Locale, string>;
+  eligibleGroups: GroupId[]; venueSublocation: Record<Locale, string> | null;
+  dressCode: Record<Locale, string> | null; mapUrl: string; cancelled: boolean };
+export type Photo = { id: string; storagePath: string; alt: Record<Locale, string>;
+  position: number; provenance: string };
+export type ContentSnapshot = { revision: number;
+  couple: { displayName: Record<Locale, string>; brideName: Record<Locale, string>; groomName: Record<Locale, string> };
+  wedding: { startDate: string; endDate: string; venueName: Record<Locale, string>; address: Record<Locale, string>; mapUrl: string };
+  story: Record<Locale, string>;
+  families: Record<Locale, string>; welcome: Record<Locale, string>;
+  ceremonyCopyApproved: boolean; hindiApproved: boolean; photos: Photo[];
+  labels: Record<Locale, Record<string, string>> };
+export type SiteSettings = { newRsvpClosesAt: string; helpPhone: string;
+  helpTelUrl: string; helpWhatsAppUrl: string; maxPartySize: number };
+export type GuestActor = { kind: "guest"; groupId: GroupId; sessionId: string };
+export type EditorActor = { kind: "editor"; groupId: GroupId;
+  submissionId: string; sessionId: string };
+export type OrganizerActor = { kind: "organizer"; userId: string };
+export type WriteActor = GuestActor | EditorActor | OrganizerActor;
+export type PartySnapshot = { id: string; groupId: GroupId; version: number;
+  response: ValidatedRsvp; source: "website" | "whatsapp" | "phone" };
+export type CreateCommand = { requestId: string; editToken: string; response: RsvpInput };
+export type EditCommand = { expectedVersion: number; response: RsvpInput };
+export type SaveResult = { id: string; version: number; duplicateWarning: boolean;
+  editPath?: string };
+
+export type WeddingSeed = { events: WeddingEvent[]; content: ContentSnapshot; settings: SiteSettings };

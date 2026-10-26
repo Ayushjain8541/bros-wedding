@@ -1,0 +1,54 @@
+# Private bilingual invitation
+
+A Next.js application foundation for a private English/Hindi invitation. Committed content and test replies are synthetic. Protected pages must load authorized repository content; synthetic defaults are test/operator tools, never a production fallback. No public invitation or marketing page is generated.
+
+## Toolchain
+
+Use Node **24.19.0** (`.node-version`) and pnpm **10.34.9** (`packageManager`). Run `corepack enable` if available, or `npx pnpm@10.34.9 <command>`. Direct dependencies are exact pins in `package.json`; `pnpm-lock.yaml` locks transitive packages. Versions and peer/engine compatibility were checked against the official npm registry on 27 October 2026.
+
+| Library | Version |
+| --- | --- |
+| Next.js / eslint-config-next | 16.4.3 |
+| React / React DOM | 19.3.1 |
+| next-intl | 4.14.9 |
+| Motion | 14.6.0 |
+| React Hook Form | 7.91.0 |
+| Zod | 4.6.7 |
+| Supabase JS / SSR | 2.118.0 / 0.12.7 |
+| postgres | 3.4.9 |
+| libphonenumber-js | 1.13.15 |
+| Tailwind / PostCSS plugin | 4.3.3 |
+| TypeScript | 5.9.3 |
+| ESLint | 9.39.5 |
+| Vitest / jsdom | 5.0.5 / 30.1.3 |
+| Playwright | 1.64.1 |
+
+ESLint 9 is used because Next's React/import/accessibility plugins currently declare compatibility through version 9. Its upstream maintenance warning is recorded; move to ESLint 10 once those peer contracts support it. TypeScript stays on the compatible 5.9 line. The install does not enable dependency lifecycle scripts automatically; native optional binaries are supplied by platform packages and the verified test/build commands work with this default.
+
+## Local setup
+
+1. Install dependencies with `pnpm install --frozen-lockfile`.
+2. Copy `.env.example` to ignored `.env.local`, then supply local values. Blank entries are intentional; never commit credentials. `DATABASE_URL` is the restricted application role, `DATABASE_ADMIN_URL` is operator-only. The app's future request handlers must never use the admin URL.
+3. Unit tests, lint, typecheck, and build do not require Docker or a database. Persistent integration/E2E work needs a running local Supabase stack. The standard Supabase CLI stack uses Docker; the experimental native Apple silicon runtime can be used where supported. No remote project is provisioned by the test scripts.
+4. Provision isolated `wedding_dev` and `wedding_test` databases with restricted application roles. Supply `TEST_DATABASE_URL` for the restricted test role and `TEST_DATABASE_ADMIN_URL` for resets/migrations on the same local test database. Supabase Auth/Storage remains in the stack's own database; do not assume each isolated application database has a Storage schema.
+5. Set the local stack's `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY`. `.env.example` documents the complete runtime/operator variable contract, including origin, rate-limit HMAC secret, and backup key.
+
+## Commands
+
+- `pnpm dev`: local Next development server.
+- `pnpm test [path]`: unit/component tests, excluding integration and E2E.
+- `pnpm test:integration [path]`: loads ignored `.env.local`, validates a dedicated loopback test database, checks connectivity, locks its use, starts Next on `127.0.0.1:3100` with the restricted role and matching `APP_ORIGIN`, polls safe `/api/health`, runs serialized integration tests, then stops the server. Tests receive `TEST_APP_ORIGIN=http://127.0.0.1:3100`; the schema operator is supplied separately. Hosted databases, non-test database names, query-string connection overrides, and occupied ports are refused.
+- `pnpm test:e2e`: Playwright, with its own managed test server on `127.0.0.1:3200`; install browsers first with `pnpm exec playwright install`. Synthetic database seeds and a local Supabase stack are required. Integration/E2E acquire the same database lock and cannot reset one another concurrently.
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`: TypeScript, ESLint, production build.
+
+## Private operator seed
+
+`WEDDING_SEED_FILE` points to a private JSON file excluded from Git. `readWeddingSeed(path)` is server-only, explicitly invoked by operator seeding code. It rejects missing/malformed files with a safe domain error and never falls back to synthetic content. Shape: `{events: WeddingEvent[8], content: ContentSnapshot, settings: SiteSettings}`. It validates bilingual fields, the eight stable event IDs and exact group memberships, ISO dates/timestamps, positive event windows, safe map/help URLs, approval flags, photo references, help-phone consistency, and party-size limits. `ContentSnapshot` includes bilingual `couple` names and `wedding` date/venue/address/map metadata, keeping personal names and venue details out of public client source.
+
+Canonical private timestamps/story/families/help links are verified locally with an independently checked ignored expected JSON. Set `WEDDING_SEED_FILE` and test-only `WEDDING_SEED_EXPECTED_FILE`, then run `pnpm test tests/unit/wedding.test.ts`. The expected JSON contains `eventWindows` (arrays of ID/start/end), `story`, `families`, and `settings`. CI uses synthetic data with the same eight/six authorization shape and skips this private-content check. Never publish canonical seed or expected files, live replies, tokens, backups, or exports.
+
+## Language and visual foundation
+
+English/Hindi dictionaries contain UI phrases only. Personal content and restricted events come from authorized data. Hindi defaults remain unapproved and require family review. Locale comes from the current request's `locale` cookie; there is no mutable global locale and no locale-keyed form remount. Later language controls must preserve future RSVP state.
+
+Latin headings use Cormorant Garamond and body/Devanagari use Noto Sans Devanagari, self-hosted via pinned Fontsource packages under SIL Open Font License 1.1. Body line-height is 1.75, Hindi 1.85. Ivory, coral, blush, peach, sage, teal, and gold-beige tokens follow the supplied watercolor mockup. Dark ink variants serve text/actions; pale decorative accents must not be used for small text. Reduced motion and keyboard focus styles are provided. Official logo, approved photography, Hindi review, and ceremony-copy approval remain operator inputs.

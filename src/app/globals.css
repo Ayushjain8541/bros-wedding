@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  /* Paper, watercolor, and restrained accents sampled visually from the approved reference. */
+  --color-ivory: #fbf6ed;
+  --color-paper: #fffaf3;
+  --color-coral: #e17f6d;
+  --color-coral-ink: #974238;
+  --color-blush: #f1d7cd;
+  --color-peach: #edc8af;
+  --color-sage: #a9b8a0;
+  --color-teal: #527b70;
+  --color-teal-ink: #315c52;
+  --color-gold-beige: #d7c6a7;
+  --color-ink: #383b35;
+  --color-muted: #63695e;
+  --color-border: #c8b9a4;
+  --font-body: "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-heading: "Cormorant Garamond", "Noto Sans Devanagari", serif;
+  --radius-control: 0.75rem;
+  --radius-card: 1.25rem;
+}
+@theme inline {
+  --color-background: var(--color-ivory);
+  --color-foreground: var(--color-ink);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-heading);
+}
+* { box-sizing: border-box; }
+html { background: var(--color-ivory); color: var(--color-ink); }
+body { margin: 0; font-family: var(--font-body); font-size: 1rem; line-height: 1.75; }
+h1, h2, h3 { font-family: var(--font-heading); font-weight: 600; line-height: 1.25; }
+:lang(hi) { line-height: 1.85; }
+h1:lang(hi), h2:lang(hi), h3:lang(hi) { line-height: 1.6; }
+a { color: var(--color-teal-ink); text-underline-offset: 0.2em; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--color-teal-ink); outline-offset: 4px; }
+button, [role="button"] { touch-action: manipulation; }
+img { max-width: 100%; height: auto; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

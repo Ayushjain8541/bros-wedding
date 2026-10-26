@@ -3,3 +3,16 @@
 docs/reference/
 docs/superpowers/
 private/
+
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+!.env.example
+*.log
+.DS_Store
