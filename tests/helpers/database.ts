@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from 'node:crypto';
+import type { GroupId, GuestActor } from '@/features/wedding/types';
 import { readFile, readdir } from 'node:fs/promises';
 import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
@@ -73,4 +75,18 @@ export async function withTestDb(run: (db: Database) => Promise<void>): Promise<
       finally { release(); }
     }
   }
+}
+
+/** Synthetic group link/session fixture; never an application authentication bypass. */
+export async function seedGuestSession(groupId: GroupId, db: Database): Promise<{ actor: GuestActor; cookie: string; code: string }> {
+  const code = randomBytes(32).toString('base64url');
+  const codeHash = createHash('sha256').update(code).digest('hex');
+  await db.begin(async tx => {
+    await tx`update wedding.invitation_groups set code_hash=${codeHash}, rotated_at=clock_timestamp() where id=${groupId}`;
+    await tx`update wedding.guest_sessions set revoked_at=clock_timestamp() where group_id=${groupId} and revoked_at is null`;
+  });
+  const cookie = randomBytes(32).toString('base64url');
+  const tokenHash = createHash('sha256').update(cookie).digest('hex');
+  const [session] = await db`insert into wedding.guest_sessions(group_id, token_hash, created_at, expires_at) select ${groupId}, ${tokenHash}, issued_at, issued_at + interval '30 days' from (select clock_timestamp() as issued_at) issued returning id`;
+  return { actor: { kind: 'guest', groupId, sessionId: session.id }, cookie, code };
 }

@@ -90,7 +90,7 @@ try {
   const e2e = process.argv.includes("--serve-e2e");
   const port = e2e ? 3200 : 3100;
   const origin = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, DATABASE_URL: database, DATABASE_ADMIN_URL: adminDatabase, APP_ORIGIN: origin, TEST_APP_ORIGIN: origin };
+  const env = { ...process.env, DATABASE_URL: database, DATABASE_ADMIN_URL: adminDatabase, APP_ORIGIN: origin, TEST_APP_ORIGIN: origin, ALLOW_INSECURE_LOCAL_COOKIES: 'true' };
   // Refuse occupied ports so readiness cannot mistake another server for ours.
   const { createServer } = await import("node:net");
   await new Promise((resolve, reject) => {
