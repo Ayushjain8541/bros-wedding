@@ -1,0 +1,154 @@
+.invitation { background: var(--color-paper); overflow-x: clip; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem clamp(1rem, 5vw, 5rem); border-bottom: 1px solid #d7c6a74d; min-height: 76px; }
+.headerTitle { color: var(--color-coral-ink); font-family: var(--font-heading); font-style: italic; font-size: 1.35rem; text-decoration: none; }
+.languages { display: flex; align-items: center; flex-shrink: 0; gap: .35rem; }
+.languages button { background: none; border: 0; padding: .5rem; min-height: 44px; color: var(--color-muted); cursor: pointer; font-size: .75rem; }
+.languages button[aria-pressed=true] { color: var(--color-teal-ink); text-decoration: underline; text-underline-offset: 6px; }
+.languages > span { width: 1px; height: 14px; background: var(--color-border); }
+.skipLink { position: absolute; left: 1rem; top: -100px; background: var(--color-paper); z-index: 10; padding: .5rem 1rem; }
+.skipLink:focus { top: 1rem; }
+.cover { min-height: min(800px, calc(100svh - 76px)); padding: clamp(3rem, 7vh, 6rem) 2rem; position: relative; display: grid; place-items: center; isolation: isolate; }
+.coverContent { position: relative; width: min(100%, 620px); text-align: center; }
+.coverTitle { font-family: var(--font-heading); font-size: 2.3rem; font-style: italic; color: var(--color-coral-ink); margin: 0; }
+.coverNames { font-family: var(--font-heading); color: var(--color-ink); font-size: clamp(2rem, 4vw, 3rem); margin: .4rem 0 0; line-height: 1.25; }
+.botanical { position: absolute; pointer-events: none; background: url('/art/botanical-corner.png') left bottom / contain no-repeat; z-index: -1; }
+.coverFlowers { width: min(34vw, 420px); height: 90%; bottom: 0; left: -3%; opacity: .85; }
+.navigation { display: flex; justify-content: center; flex-wrap: wrap; gap: .3rem clamp(.5rem, 2.3vw, 2rem); padding: .65rem 1rem; border-block: 1px solid #d7c6a780; background: var(--color-paper); }
+.navigation a { color: var(--color-muted); text-decoration: none; font-size: .78rem; min-height: 44px; display: flex; align-items: center; padding: .35rem; }
+.navigation a:hover, .textLink:hover { color: var(--color-coral-ink); }
+.section { position: relative; width: min(1120px, 100%); margin: 0 auto; padding: 6rem clamp(1.25rem, 5vw, 4rem); scroll-margin-top: 1rem; }
+.section h2 { font-size: clamp(2.7rem, 4.3vw, 3.8rem); color: var(--color-coral-ink); font-style: italic; font-weight: 400; margin: 0 0 1.25rem; text-wrap: balance; }
+.section p { margin-top: 0; }
+.section :lang(hi) { font-family: var(--font-body); }
+.section h2:lang(hi) { font-size: clamp(1.8rem, 3vw, 2.6rem); font-style: normal; }
+.welcome { width: 100%; max-width: 1600px; text-align: center; min-height: 720px; display: grid; place-items: center; isolation: isolate; padding-block: 4.5rem 6rem; }
+.welcomeInner { width: min(760px, 100%); }
+.markPlaceholder { display: grid; place-items: center; border: 1px dashed #b2a58b; width: 94px; min-height: 84px; padding: .7rem; margin: 0 auto 2rem; color: var(--color-muted); font-size: .6rem; line-height: 1.6; }
+.welcome h1 { font-size: clamp(3.2rem, 7.5vw, 6rem); font-weight: 400; letter-spacing: -.025em; color: var(--color-coral-ink); margin: 0 0 1.5rem; line-height: 1.05; text-wrap: balance; outline-offset: 12px; }
+.welcome h1:lang(hi) { font-size: clamp(2.2rem, 5.3vw, 4rem); line-height: 1.5; letter-spacing: 0; }
+.welcomeCopy { max-width: 42ch; font-family: var(--font-heading); font-size: 1.45rem; line-height: 1.55; margin: auto auto 1.1rem; }
+.welcomeCopy:lang(hi) { font-size: 1.05rem; }
+.flourish { display: block; width: 100px; height: 30px; fill: none; stroke: #ac8c62; stroke-width: 1; margin: 1.8rem auto; }
+.weddingDate { font-family: var(--font-heading); font-size: 1.65rem; margin-bottom: .3rem; }
+.welcomeVenue { font-size: .8rem; color: var(--color-muted); margin-bottom: 2rem; }
+.welcomeFlowersLeft { width: min(28vw, 370px); height: 90%; bottom: 0; left: -2%; }
+.welcomeFlowersRight { width: min(24vw, 330px); height: 90%; top: 0; right: -2%; transform: rotate(180deg); opacity: .85; }
+.textLink { font-size: .8rem; display: inline-flex; gap: 1rem; align-items: center; padding: .7rem .15rem; text-decoration-thickness: 1px; }
+.draftNote { text-align: center; font-size: .75rem; padding: .8rem 1.5rem; margin: 0; color: var(--color-coral-ink); background: #f6e8dc; }
+.families { text-align: center; padding-block: 5rem; border-top: 1px solid #d7c6a780; }
+.sectionNote { color: var(--color-muted); font-size: .85rem; }
+.familyColumns { display: flex; justify-content: center; margin-top: 2.5rem; gap: 3.5rem; }
+.familyColumns p { white-space: pre-line; font-family: var(--font-heading); font-size: 1.55rem; line-height: 1.6; flex: 1; max-width: 390px; margin-bottom: 0; }
+.familyColumns p + p { border-left: 1px solid #d7c6a7; padding-left: 3.5rem; }
+.familyColumns p:lang(hi) { font-size: 1.1rem; }
+.story { display: grid; grid-template-columns: 1fr 1.05fr; align-items: center; gap: 4.5rem; padding-block: 5rem 7rem; }
+.storyCopy { font-size: .98rem; white-space: pre-line; line-height: 1.95; }
+.storyText .flourish { margin: 2rem 0 0; }
+.collage { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; align-items: start; }
+.collage figure { margin: 0; }
+.mainPhoto { grid-column: 1 / -1; transform: rotate(-2deg); padding: .7rem .7rem .5rem; background: #fffdf8; box-shadow: 0 8px 24px #6b5b3e12; margin-bottom: .8rem !important; }
+.photoMat { background: #e9e9dc; color: #575d4e; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 0; padding: .6rem; }
+.mainPhoto .photoMat { aspect-ratio: 1.25; }
+.photoMat img { width: 40%; max-width: 100px; opacity: .8; }
+.photoMat span { max-width: 19ch; font-size: .62rem; line-height: 1.6; }
+.mainPhoto .photoMat span { font-size: .8rem; }
+.mainPhoto figcaption:lang(hi) { font-style: normal; font-size: .9rem; }
+.mainPhoto figcaption { text-align: center; font-family: var(--font-heading); color: var(--color-muted); font-style: italic; padding-top: .5rem; font-size: 1.1rem; }
+.smallPhoto { background: #fffdf8; padding: .3rem; box-shadow: 0 4px 12px #6b5b3e0d; }
+.smallPhoto:nth-child(2n) { transform: rotate(2deg); }
+.smallPhoto .photoMat { aspect-ratio: .75; background: #eee3d8; }
+.smallPhoto:nth-child(2n) .photoMat { background: #e6e7dd; }
+.smallPhoto .photoMat img { width: 60%; }
+.celebrations { text-align: center; border-top: 1px solid #d7c6a780; }
+.dayNavigation { display: flex; justify-content: center; margin: 2.5rem auto 0; max-width: 590px; border-block: 1px solid #bfb59e; }
+.dayNavigation a { flex: 1; padding: 1rem .5rem; text-decoration: none; }
+.dayNavigation a + a { border-left: 1px solid #d7c6a780; }
+.dayNavigation a:hover { background: #eee8dc; }
+.dayNavigation span { display: block; font-family: var(--font-heading); font-size: 1.5rem; color: var(--color-coral-ink); }
+.dayNavigation small { display: block; font-size: .65rem; color: var(--color-muted); }
+.timezone { font-size: .7rem; color: var(--color-muted); margin: .9rem 0 3rem !important; }
+.schedule { text-align: left; }
+.day { display: grid; grid-template-columns: 150px 1fr; gap: 2.5rem; padding: 2.5rem 0; border-bottom: 1px solid #d7c6a780; scroll-margin-top: 1.5rem; }
+.day h3 { font-family: var(--font-heading); color: var(--color-teal-ink); font-size: 1.4rem; margin: 0; font-weight: 400; text-align: center; }
+.day h3 > span { display: block; font-size: 4rem; line-height: 1.1; }
+.day h3 > small { display: block; font-family: var(--font-body); font-size: .68rem; margin-top: .7rem; }
+.events { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2.5rem; row-gap: 1.5rem; }
+.event { padding-block: .25rem .75rem; }
+.event h4 { font-family: var(--font-heading); color: var(--color-ink); font-size: 1.7rem; font-weight: 400; line-height: 1.25; margin: 0 0 .45rem; }
+.event h4:lang(hi) { font-family: var(--font-body); font-size: 1.1rem; line-height: 1.65; }
+.event p { font-size: .8rem; margin-block: .6rem 0; }
+.event .eventTime { color: var(--color-coral-ink); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.response { text-align: center; padding-block: 4rem; background: #edf0e7; max-width: none; }
+.response h2 { color: var(--color-teal-ink); }
+.response p { font-size: .85rem; max-width: 45ch; margin-inline: auto; }
+.response button { border: 1px solid #81907b; color: #52604b; background: transparent; padding: .8rem 1.8rem; border-radius: 3px; font-size: .8rem; cursor: not-allowed; }
+.venue { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; padding-block: 5rem; }
+.venue h2 { font-size: 2.8rem; }
+.venue h3 { font-size: 1.8rem; font-weight: 400; margin: 1.5rem 0 .5rem; }
+.venue p { font-size: .85rem; max-width: 36ch; }
+.help { border-left: 1px solid #d7c6a7; padding-left: 3rem; }
+.help .phone { font-size: 1rem; letter-spacing: .03em; margin-block: 1.5rem; }
+.contactLinks { display: flex; gap: .75rem; flex-wrap: wrap; }
+.solidLink, .outlineLink { min-height: 44px; text-decoration: none; padding: .65rem 1.4rem; border-radius: 3px; font-size: .8rem; }
+.solidLink { background: var(--color-teal-ink); color: var(--color-paper); }
+.solidLink:hover { background: #254a42; }
+.outlineLink { border: 1px solid var(--color-teal-ink); color: var(--color-teal-ink); }
+.outlineLink:hover { background: #e9eee4; }
+.footer { text-align: center; padding: 3rem 1.5rem; border-top: 1px solid #d7c6a780; background: #f6eee2; }
+.footer p { font-family: var(--font-heading); font-size: 2rem; color: var(--color-coral-ink); margin: 0; }
+.footer > span { font-size: .72rem; display: block; margin-top: .7rem; }
+.footer button { background: none; border: 0; color: var(--color-teal-ink); text-decoration: underline; text-underline-offset: 5px; margin-top: 1.5rem; padding: .65rem; min-height: 44px; font-size: .75rem; cursor: pointer; }
+@media (min-width: 1600px) { .welcome { border-inline: 1px solid #d7c6a740; } }
+@media (max-width: 767px) {
+  .header { min-height: 66px; padding: .65rem 1rem; gap: .3rem; }
+  .headerTitle { font-size: 1.1rem; }
+  .languages { gap: 0; }
+  .languages button { padding-inline: .4rem; }
+  .cover { min-height: calc(100svh - 66px); padding: 4rem 1.5rem; }
+  .coverFlowers { width: 55%; height: 60%; opacity: .55; left: -12%; }
+  .coverTitle { font-size: 2rem; }
+  .coverNames { font-size: 2.4rem; }
+  .section { padding: 3.7rem 1.5rem; }
+  .navigation { gap: .15rem .65rem; padding: .35rem .65rem; }
+  .navigation a { font-size: .7rem; padding: .25rem; min-height: 44px; }
+  .welcome { min-height: 680px; padding: 3.5rem 2.2rem 6rem; }
+  .welcomeInner { position: relative; }
+  .welcomeFlowersLeft { width: 47%; height: 55%; left: -12%; opacity: .72; }
+  .welcomeFlowersRight { width: 38%; height: 45%; top: -2%; right: -12%; opacity: .65; }
+  .welcome h1 { font-size: clamp(3.1rem, 12vw, 4.8rem); }
+  .welcome h1:lang(hi) { font-size: 2.5rem; }
+  .markPlaceholder { margin-bottom: 2.5rem; }
+  .welcomeCopy { font-size: 1.3rem; }
+  .weddingDate { font-size: 1.4rem; }
+  .familyColumns { gap: 1.3rem; margin-top: 2rem; }
+  .familyColumns p { font-size: 1.3rem; }
+  .familyColumns p + p { padding-left: 1.3rem; }
+  .familyColumns p:lang(hi) { font-size: .92rem; }
+  .story { grid-template-columns: 1fr; gap: 2.5rem; }
+  .storyText { max-width: 60ch; }
+  .storyCopy { font-size: .93rem; }
+  .collage { width: min(430px, 100%); margin: auto; gap: .7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .smallPhoto .photoMat span { font-size: .75rem; }
+  .smallPhoto .photoMat { aspect-ratio: 1.1; padding: .7rem; }
+  .dayNavigation span { font-size: 1.3rem; }
+  .dayNavigation small { font-size: .6rem; }
+  .day { grid-template-columns: 75px 1fr; gap: 1.4rem; padding-block: 2rem; }
+  .day h3 { font-size: 1.15rem; }
+  .day h3 > span { font-size: 3.2rem; }
+  .events { grid-template-columns: 1fr; gap: 1.3rem; }
+  .event h4 { font-size: 1.6rem; }
+  .event .eventTime { font-size: .7rem; }
+  .venue { grid-template-columns: 1fr; gap: 3rem; }
+  .help { border-left: 0; border-top: 1px solid #d7c6a7; padding: 3rem 0 0; }
+  .venue p { max-width: none; }
+}
+@media (max-width: 359px) {
+  .headerTitle { max-width: 130px; line-height: 1.2; }
+  .section { padding-inline: 1.2rem; }
+  .familyColumns { flex-direction: column; gap: 1.7rem; }
+  .familyColumns p + p { border-left: 0; padding-left: 0; }
+  .day { grid-template-columns: 58px 1fr; gap: 1rem; }
+  .welcome { padding-inline: 1.6rem; }
+  .welcome h1:lang(hi) { font-size: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) { .cover { display: none; } }

@@ -1,3 +1,5 @@
+import { getLocale } from 'next-intl/server';
+import { Invitation } from '@/features/invitation/Invitation';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
@@ -16,10 +18,7 @@ export default async function InvitationPage() {
     throw error;
   });
   // Authenticate on every protected request, then filter in SQL before rendering.
-  const { content, events } = await readInvitation(actor.groupId, db);
-  return <main>
-    <h1>{content.couple.displayName.en}</h1>
-    <p>{content.wedding.venueName.en}</p>
-    <ul>{events.map(event => <li key={event.id} data-event-id={event.id}>{event.title.en}</li>)}</ul>
-  </main>;
+  const { content, events, settings } = await readInvitation(actor.groupId, db);
+  const locale = (await getLocale()) === 'hi' ? 'hi' : 'en';
+  return <Invitation content={content} events={events} settings={settings} locale={locale}/>;
 }

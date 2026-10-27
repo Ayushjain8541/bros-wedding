@@ -98,7 +98,17 @@ try {
     check.once("error", reject);
     check.listen(port, "127.0.0.1", () => check.close(resolve));
   });
-  server = spawn(process.execPath, [fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url)), "dev", "--hostname", "127.0.0.1", "--port", String(port)], { env, stdio: "inherit" });
+  // Browser acceptance tests exercise a built server: development HMR is not a
+  // product behavior and can reload while browser assertions are in flight.
+  const production = process.argv.includes("--production");
+  if (production) {
+    const build = spawn(process.execPath, [fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url)), "build"], { env, stdio: "inherit" });
+    tests = build;
+    const status = await new Promise(resolve => { build.once("error", () => resolve(1)); build.once("exit", resolve); });
+    tests = undefined;
+    if (status !== 0 || stopping) throw new Error("Test production build failed");
+  }
+  server = spawn(process.execPath, [fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url)), production ? "start" : "dev", "--hostname", "127.0.0.1", "--port", String(port)], { env, stdio: "inherit" });
   let serverExited = false;
   server.once("exit", () => { serverExited = true; });
   server.once("error", () => { serverExited = true; });
