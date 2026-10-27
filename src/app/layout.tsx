@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "@fontsource/cormorant-garamond/latin-400.css";
@@ -6,6 +7,17 @@ import "@fontsource/cormorant-garamond/latin-600.css";
 import "@fontsource/noto-sans-devanagari/latin-400.css";
 import "@fontsource/noto-sans-devanagari/devanagari-400.css";
 import "./globals.css";
+
+const invitationScript = localFont({
+  src: "../../node_modules/@fontsource/pinyon-script/files/pinyon-script-latin-400-normal.woff2",
+  variable: "--font-invitation-script",
+  weight: "400",
+  style: "normal",
+  display: "swap",
+  preload: true,
+  fallback: ["Times New Roman", "serif"],
+  adjustFontFallback: "Times New Roman",
+});
 
 export const metadata: Metadata = {
   title: "Private invitation",
@@ -17,7 +29,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const messages = await getMessages();
   return (
     <html lang={locale}>
-      <body><NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Kolkata">{children}</NextIntlClientProvider></body>
+      <body className={invitationScript.variable}><NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Kolkata">{children}</NextIntlClientProvider></body>
     </html>
   );
 }

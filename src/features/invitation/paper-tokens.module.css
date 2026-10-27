@@ -1,0 +1,93 @@
+/* Invitation-only material and typography contract. Import classes explicitly;
+   adding the font variable to body never changes organizer typography. */
+.paperSurface {
+  --paper-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --paper-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --paper-feedback: 160ms;
+  --paper-panel: 200ms;
+  --paper-chapter: 480ms;
+  --paper-color: #fffaf3;
+  --paper-ivory: #fbf6ed;
+  --paper-coral-ink: #974238;
+  --paper-sage: #a9b8a0;
+  --paper-teal-ink: #315c52;
+  --paper-text: #383b35;
+  --paper-rule: #d7c6a7;
+  --paper-page-width: 1088px;
+  --paper-editorial-width: 640px;
+  --paper-gutter: 24px;
+  --paper-chapter-padding: 72px;
+  color: var(--paper-text);
+  background-color: var(--paper-color);
+}
+
+.latinDisplay,
+.latinTitle {
+  font-family: var(--font-invitation-script), "Times New Roman", serif;
+  font-style: normal;
+  font-weight: 400;
+  font-synthesis: none;
+  color: var(--paper-coral-ink, #974238);
+  text-wrap: balance;
+}
+.latinDisplay {
+  font-size: clamp(3.4rem, 12vw, 5rem);
+  line-height: 1.2;
+}
+.latinTitle {
+  font-size: clamp(2.5rem, 8vw, 3.5rem);
+  line-height: 1.25;
+}
+.hindiDisplay,
+.hindiTitle,
+.hindiDisplay:lang(hi),
+.hindiTitle:lang(hi) {
+  font-family: "Noto Sans Devanagari", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-synthesis: none;
+  color: var(--paper-coral-ink, #974238);
+  text-wrap: balance;
+  line-height: 1.5;
+}
+.hindiDisplay { font-size: clamp(2rem, 7.5vw, 3.5rem); }
+.hindiTitle { font-size: clamp(1.75rem, 5vw, 2.5rem); }
+
+.editorial {
+  max-width: 56ch;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.editorial strong { font-weight: 600; }
+.editorial:lang(hi) {
+  font-family: "Noto Sans Devanagari", sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-synthesis: none;
+  line-height: 1.85;
+}
+.controls {
+  min-width: 44px;
+  min-height: 44px;
+  font-family: "Noto Sans Devanagari", system-ui, sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1.5;
+}
+.controls:lang(hi) { line-height: 1.85; }
+.controls:focus-visible {
+  outline: 3px solid var(--paper-teal-ink, #315c52);
+  outline-offset: 4px;
+}
+
+@media (min-width: 768px) {
+  .paperSurface { --paper-chapter-padding: 112px; }
+  .latinDisplay { font-size: clamp(5rem, 7vw, 7rem); }
+  .editorial { font-size: 20px; }
+  .editorial:lang(hi) { font-size: 18px; }
+}
+@media (max-width: 320px) {
+  .paperSurface { --paper-gutter: 20px; }
+}
