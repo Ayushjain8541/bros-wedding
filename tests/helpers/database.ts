@@ -65,8 +65,17 @@ export async function withTestDb(run: (db: Database) => Promise<void>): Promise<
       if (created.error) throw new Error('TEST_STORAGE_UNAVAILABLE');
       bucket = await client.storage.getBucket('wedding-photos-test');
     }
-    if (bucket.error || bucket.data?.public !== false) throw new Error('TEST_STORAGE_NOT_PRIVATE');
-    await run(application);
+    const types = ['image/jpeg', 'image/png', 'image/webp'];
+    if (bucket.error || !bucket.data) throw new Error('TEST_STORAGE_UNAVAILABLE');
+    if (bucket.data.public !== false || Number(bucket.data.file_size_limit) !== 10 * 1024 * 1024 || JSON.stringify([...(bucket.data.allowed_mime_types ?? [])].sort()) !== JSON.stringify(types)) {
+      const fixed = await client.storage.updateBucket('wedding-photos-test', {public:false,fileSizeLimit:10*1024*1024,allowedMimeTypes:types});
+      if(fixed.error)throw new Error('TEST_STORAGE_UNAVAILABLE');
+      bucket=await client.storage.getBucket('wedding-photos-test');
+    }
+    if (bucket.error || bucket.data?.public !== false || Number(bucket.data.file_size_limit) !== 10*1024*1024 || JSON.stringify([...(bucket.data.allowed_mime_types ?? [])].sort()) !== JSON.stringify(types)) throw new Error('TEST_STORAGE_NOT_PRIVATE');
+    if ((await client.storage.emptyBucket('wedding-photos-test')).error) throw new Error('TEST_STORAGE_UNAVAILABLE');
+    try { await run(application); }
+    finally { if ((await client.storage.emptyBucket('wedding-photos-test')).error) throw new Error('TEST_STORAGE_CLEANUP_FAILED'); }
   } finally {
     try {
       if (locked && admin) await admin`select pg_advisory_unlock(20261026, 2)`;

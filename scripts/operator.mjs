@@ -36,5 +36,12 @@ export async function ensurePrivateBucket(client, name) {
     if (created.error) throw new Error('PRIVATE_STORAGE_UNAVAILABLE');
     result = await client.storage.getBucket(name);
   }
-  if (result.error || !result.data || result.data.public !== false) throw new Error('PRIVATE_STORAGE_UNAVAILABLE');
+  if (result.error || !result.data) throw new Error('PRIVATE_STORAGE_UNAVAILABLE');
+  const types = ['image/jpeg', 'image/png', 'image/webp'];
+  if (result.data.public !== false || Number(result.data.file_size_limit) !== 10 * 1024 * 1024 || JSON.stringify([...(result.data.allowed_mime_types ?? [])].sort()) !== JSON.stringify(types)) {
+    const updated = await client.storage.updateBucket(name, { public: false, fileSizeLimit: 10 * 1024 * 1024, allowedMimeTypes: types });
+    if (updated.error) throw new Error('PRIVATE_STORAGE_UNAVAILABLE');
+    result = await client.storage.getBucket(name);
+  }
+  if (result.error || result.data?.public !== false || Number(result.data.file_size_limit) !== 10 * 1024 * 1024 || JSON.stringify([...(result.data.allowed_mime_types ?? [])].sort()) !== JSON.stringify(types)) throw new Error('PRIVATE_STORAGE_UNAVAILABLE');
 }

@@ -24,6 +24,7 @@ export default async function ProtectedAdminLayout({
         <nav>
           <Link href="/admin">All responses</Link>
           <Link href="/admin/responses/new">Add phone or WhatsApp reply</Link>
+          <Link href="/admin/content">Edit invitation content</Link>
           <LogoutButton />
         </nav>
       </header>

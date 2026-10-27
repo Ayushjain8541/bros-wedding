@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import type { Locale, WeddingEvent } from "@/features/wedding/types";
 import { FieldError, type FormValues } from "./form-fields";
 import styles from "./RsvpForm.module.css";
+import { formatEventTime } from "@/features/wedding/time";
 export function EventsStep({
   events,
   locale,
@@ -12,6 +13,7 @@ export function EventsStep({
   locale: Locale;
 }) {
   const t = useTranslations("Rsvp");
+  const invitation = useTranslations("Invitation");
   const { register, formState, control } = useFormContext<FormValues>();
   const selectedIds = useWatch({ control, name: "eventIds" }) ?? [];
   return (
@@ -42,9 +44,21 @@ export function EventsStep({
                 {new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-GB", {
                   day: "numeric",
                   month: "long",
+
                   timeZone: "Asia/Kolkata",
                 }).format(new Date(event.startAt))}
               </small>
+              <small>
+                {formatEventTime(event.startAt, locale, {
+                  am: invitation("am"),
+                  pm: invitation("pm"),
+                })}{" "}
+                IST
+                {event.endAt
+                  ? ` – ${formatEventTime(event.endAt, locale, { am: invitation("am"), pm: invitation("pm") })}`
+                  : ` ${invitation("onwards")}`}
+              </small>
+              {event.dressCode && <small>{event.dressCode[locale]}</small>}
             </span>
           </label>
         ))}
