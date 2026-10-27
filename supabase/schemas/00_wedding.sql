@@ -73,7 +73,8 @@ create table wedding.rsvp_submissions (
   id uuid primary key default gen_random_uuid(),
   group_id text not null references wedding.invitation_groups(id),
   version integer not null default 1 check(version > 0),
-  request_id uuid not null unique,
+  request_id uuid not null,
+  original_duplicate_warning boolean not null default false,
   payload_fingerprint text not null check(payload_fingerprint ~ '^[a-f0-9]{64}$'),
   edit_token_hash text not null unique check(edit_token_hash ~ '^[a-f0-9]{64}$'),
   decision text not null check(decision in ('accept','decline')),
@@ -88,6 +89,7 @@ create table wedding.rsvp_submissions (
   source text not null default 'website' check(source in ('website','whatsapp','phone')),
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   unique(id,group_id),
+  constraint rsvp_submissions_group_request_id_key unique(group_id,request_id),
   check ((decision='accept' and arrival_date is not null and departure_date is not null and arrival_window is not null and departure_window is not null and note is null)
     or (decision='decline' and arrival_date is null and departure_date is null and arrival_window is null and departure_window is null and song_name is null and song_artist is null and song_url is null and questions is null)),
   check(arrival_window in ('before-noon','noon-5pm','5-9pm','after-9pm')),

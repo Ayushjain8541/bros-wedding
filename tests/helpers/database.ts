@@ -90,3 +90,16 @@ export async function seedGuestSession(groupId: GroupId, db: Database): Promise<
   const [session] = await db`insert into wedding.guest_sessions(group_id, token_hash, created_at, expires_at) select ${groupId}, ${tokenHash}, issued_at, issued_at + interval '30 days' from (select clock_timestamp() as issued_at) issued returning id`;
   return { actor: { kind: 'guest', groupId, sessionId: session.id }, cookie, code };
 }
+
+/** Synthetic party persisted through the real service; only session issuance is test-only. */
+export async function createPartyFixture(groupId: GroupId, db: Database): Promise<{ actor: import('@/features/wedding/types').EditorActor; token: string; party: import('@/features/wedding/types').PartySnapshot }> {
+  const { createRsvp, readOwnRsvp } = await import('@/features/rsvp/service');
+  const { acceptedInput } = await import('../fixtures/wedding');
+  const { randomUUID } = await import('node:crypto');
+  const { actor: guest } = await seedGuestSession(groupId, db);
+  const token = randomBytes(32).toString('base64url');
+  const saved = await createRsvp(guest, groupId, { requestId: randomUUID(), editToken: token, response: acceptedInput() }, db);
+  const [session] = await db`insert into wedding.edit_sessions(submission_id,token_hash,expires_at) values(${saved.id},${createHash('sha256').update(randomBytes(32)).digest('hex')},clock_timestamp()+interval '1 day') returning id`;
+  const actor = {kind:'editor' as const, groupId, submissionId:saved.id, sessionId:session.id};
+  return {actor, token, party:await readOwnRsvp(actor,db)};
+}
