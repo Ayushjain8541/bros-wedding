@@ -1,5 +1,5 @@
 "use client";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import type { Locale, WeddingEvent } from "@/features/wedding/types";
 import { FieldError, type FormValues } from "./form-fields";
@@ -12,7 +12,8 @@ export function EventsStep({
   locale: Locale;
 }) {
   const t = useTranslations("Rsvp");
-  const { register, formState } = useFormContext<FormValues>();
+  const { register, formState, control } = useFormContext<FormValues>();
+  const selectedIds = useWatch({ control, name: "eventIds" }) ?? [];
   return (
     <>
       <h2>{t("eventSelection")}</h2>
@@ -24,7 +25,7 @@ export function EventsStep({
             <input
               type="checkbox"
               value={event.id}
-              disabled={event.cancelled}
+              disabled={event.cancelled && !selectedIds.includes(event.id)}
               {...register("eventIds")}
               aria-invalid={!!formState.errors.eventIds}
               aria-describedby={
@@ -34,6 +35,9 @@ export function EventsStep({
             <span>
               {event.title[locale]}
               {event.cancelled && ` — ${t("cancelled")}`}
+              {event.cancelled && selectedIds.includes(event.id) && (
+                <small>{t("removeCancelledEvent")}</small>
+              )}
               <small>
                 {new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-GB", {
                   day: "numeric",

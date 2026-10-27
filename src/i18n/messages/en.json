@@ -114,7 +114,8 @@
     "closedHelp": "Please contact the wedding team for help, or use the secure link from your existing response.",
     "loadingResponse": "Loading your saved response…",
     "loadFailed": "We could not open your response",
-    "reopenInstructions": "Reopen your original invitation link first, then open your original secure edit link again. If this still fails, contact the wedding team."
+    "reopenInstructions": "Reopen your original invitation link first, then open your original secure edit link again. If this still fails, contact the wedding team.",
+    "removeCancelledEvent": "Uncheck to remove this cancelled event."
   },
   "Errors": {
     "REQUIRED": "Please complete this field.",

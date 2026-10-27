@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RsvpForm } from "@/features/rsvp/RsvpForm";
@@ -392,4 +392,88 @@ it("does not confirm another party if the shared edit session changes before con
   expect(
     screen.getByRole("link", { name: "Open secure edit link" }),
   ).toBeVisible();
+});
+
+it("directly removes a saved cancelled event while retaining active selections and edited contact/travel", async () => {
+  const user = userEvent.setup();
+  const events = EVENTS.map((event) =>
+    event.id === "haldi" ? { ...event, cancelled: true } : event,
+  );
+  const response = acceptedInput({ eventIds: ["haldi", "reception"] });
+  const edited = {
+    ...response,
+    contact: { ...response.contact, fullName: "Asha Sharma" },
+    eventIds: ["reception"],
+    travel: { ...response.travel, arrivalDate: "2027-02-11" },
+  };
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json({ id: initial.id, version: 2, duplicateWarning: false }),
+    )
+    .mockResolvedValueOnce(
+      Response.json({ ...initial, version: 2, response: edited }),
+    );
+  vi.stubGlobal("fetch", fetchMock);
+  render(
+    <RsvpForm
+      events={events}
+      settings={SETTINGS}
+      locale="en"
+      initial={{ ...initial, response }}
+    />,
+  );
+  await user.clear(screen.getByRole("textbox", { name: "Full name" }));
+  await user.type(
+    screen.getByRole("textbox", { name: "Full name" }),
+    "Asha Sharma",
+  );
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  const cancelled = screen.getByRole("checkbox", {
+    name: new RegExp(events.find((event) => event.id === "haldi")!.title.en),
+  });
+  const active = screen.getByRole("checkbox", {
+    name: new RegExp(
+      events.find((event) => event.id === "reception")!.title.en,
+    ),
+  });
+  expect(cancelled).toBeChecked();
+  expect(active).toBeChecked();
+  expect(cancelled).toBeEnabled();
+  await user.click(cancelled);
+  expect(cancelled).not.toBeChecked();
+  expect(cancelled).toBeDisabled();
+  await user.click(cancelled);
+  expect(cancelled).not.toBeChecked();
+  expect(active).toBeChecked();
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  fireEvent.change(screen.getByLabelText("Arrival date"), {
+    target: { value: "2027-02-11" },
+  });
+  await user.click(screen.getByRole("button", { name: "Back" }));
+  expect(
+    screen.getByRole("checkbox", {
+      name: new RegExp(events.find((event) => event.id === "haldi")!.title.en),
+    }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("checkbox", {
+      name: new RegExp(
+        events.find((event) => event.id === "reception")!.title.en,
+      ),
+    }),
+  ).toBeChecked();
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByLabelText("Arrival date")).toHaveValue("2027-02-11");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await screen.findByText("Your response is saved.");
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+    expectedSubmissionId: initial.id,
+    expectedVersion: 1,
+    response: edited,
+  });
+  expect(fetchMock.mock.calls[0][0]).toBe("/api/rsvp/current");
+  expect(fetchMock.mock.calls[0][1].method).toBe("PATCH");
 });
