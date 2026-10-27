@@ -95,6 +95,24 @@
     "CONFLICT": "This response has changed. Reload before saving.",
     "DEADLINE_PASSED": "The deadline for new responses has passed.",
     "RATE_LIMITED": "Please wait a moment before trying again.",
-    "SAVE_FAILED": "Your response was not saved. Please try again."
+    "SAVE_FAILED": "Your response was not saved. Please try again.",
+    "VALIDATION_FAILED": "Please check the highlighted fields.",
+    "required": "Please complete this field.",
+    "invalid_type": "Check the value entered in this field.",
+    "invalid_name": "Enter a full name with at least two name parts.",
+    "invalid_phone": "Enter a valid phone number with country code, without an extension.",
+    "too_long": "This entry is too long. Please shorten it.",
+    "invalid_party_size": "Enter a full name for each guest, within the allowed party size (up to 200).",
+    "invalid_events": "Choose at least one available event.",
+    "unauthorized_event": "This event is unavailable for your invitation.",
+    "duplicate_event": "Select each event only once.",
+    "unknown_field": "This field is not allowed for this response. Please review your response.",
+    "invalid_date": "Enter a valid calendar date.",
+    "invalid_window": "Choose an approximate time from the available options.",
+    "travel_order": "Departure must be on or after arrival, including the time window on the same day.",
+    "travel_too_long": "Your stay cannot exceed 366 nights. Please contact the wedding team for a longer stay.",
+    "invalid_song": "Enter both the song name and artist.",
+    "invalid_url": "Enter a valid HTTP or HTTPS link.",
+    "invalid_decision": "Choose whether you accept or decline."
   }
 }
