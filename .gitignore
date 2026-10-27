@@ -16,3 +16,6 @@ next-env.d.ts
 !.env.example
 *.log
 .DS_Store
+
+.next-restore-test-*/
+tsconfig.restore.json

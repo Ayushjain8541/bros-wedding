@@ -1,6 +1,6 @@
 import { Dashboard } from "@/features/organizer/Dashboard";
 import { getDb } from "@/lib/db/server";
-import { requireOrganizer } from "@/features/organizer/auth";
+import { requireOrganizerPage } from "@/features/organizer/page-auth";
 import {
   listResponses,
   parseAdminFilters,
@@ -13,7 +13,7 @@ export default async function ResponsesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const db = getDb(),
-    actor = await requireOrganizer(db);
+    actor = await requireOrganizerPage(db);
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(await searchParams))
     if (typeof v === "string" && v !== "") params.set(k, v);

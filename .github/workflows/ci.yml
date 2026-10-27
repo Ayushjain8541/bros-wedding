@@ -1,0 +1,71 @@
+name: Local synthetic acceptance
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wedding-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      NO_COLOR: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Install locked dependencies and browser engines
+        run: |
+          npx pnpm@10.34.9 install --frozen-lockfile
+          npx pnpm@10.34.9 exec playwright install --with-deps chromium webkit
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-17
+          echo 'PG_BIN_DIR=/usr/lib/postgresql/17/bin' >> "$GITHUB_ENV"
+      - name: Start disposable Supabase (no app migrations in vendor database)
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/wedding-stack/supabase"
+          cat > "$RUNNER_TEMP/wedding-stack/supabase/config.toml" <<'CONFIG'
+          project_id = "wedding-ci"
+          [db]
+          major_version = 17
+          [auth]
+          enable_signup = false
+          enable_anonymous_sign_ins = false
+          [auth.email]
+          enable_signup = true
+          CONFIG
+          cd "$RUNNER_TEMP/wedding-stack"
+          npx --yes supabase@2.122.0 start > "$RUNNER_TEMP/stack-start.log" 2>&1
+          npx --yes supabase@2.122.0 status --output json > "$RUNNER_TEMP/stack-status.json"
+      - name: Bootstrap fresh restricted test database
+        env:
+          CI_SUPABASE_STATUS_FILE: ${{ runner.temp }}/stack-status.json
+        run: |
+          node scripts/ci-bootstrap.mjs
+          node --env-file=.env.local scripts/ci-bootstrap.mjs --verify
+      - run: npx pnpm@10.34.9 lint
+      - run: npx pnpm@10.34.9 typecheck
+      - run: npx pnpm@10.34.9 test
+      - run: npx pnpm@10.34.9 test:integration
+      - run: npx pnpm@10.34.9 test:e2e
+      - run: npx pnpm@10.34.9 build
+      - name: Stop disposable stack and erase runtime credentials
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/wedding-stack/supabase/config.toml"; then
+            (cd "$RUNNER_TEMP/wedding-stack" && npx --yes supabase@2.122.0 stop --no-backup) > "$RUNNER_TEMP/stack-stop.log" 2>&1 || true
+          fi
+          rm -f .env.local "$RUNNER_TEMP/stack-status.json" "$RUNNER_TEMP/stack-start.log" "$RUNNER_TEMP/stack-stop.log"

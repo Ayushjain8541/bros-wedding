@@ -7,6 +7,10 @@ import { fileURLToPath } from "node:url";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
+// Child tools choose one color policy, avoiding inherited NO_COLOR/FORCE_COLOR conflicts.
+delete process.env.FORCE_COLOR;
+delete process.env.NO_COLOR;
+
 // The resettable test database must never be a hosted or production target.
 function testDatabase(value = process.env.TEST_DATABASE_URL) {
   try {

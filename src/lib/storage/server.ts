@@ -18,17 +18,18 @@ import {
 } from "@/features/organizer/content";
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 export function photoBucket() {
-  const name =
-    process.env.PHOTO_BUCKET ??
-    (new URL(process.env.DATABASE_URL!).pathname === "/wedding_test"
-      ? "wedding-photos-test"
-      : "wedding-photos-dev");
-  if (!["wedding-photos-test", "wedding-photos-dev"].includes(name))
-    throw new DomainError("INVALID_SERVER_CONFIGURATION", 500);
-  // Test app must never write dev objects even if its inherited env selected that bucket.
-  return new URL(process.env.DATABASE_URL!).pathname === "/wedding_test"
-    ? "wedding-photos-test"
-    : name;
+  const database = new URL(process.env.DATABASE_URL!);
+  // Restore rehearsals use a distinct, deterministic namespace and loopback database.
+  const restore = /^\/wedding_restore_test_([a-z0-9_]{1,32})$/.exec(database.pathname);
+  if (restore) {
+    const expected = `wedding-photos-restore-test-${restore[1].replaceAll("_", "-")}`;
+    if (!["localhost", "127.0.0.1", "[::1]"].includes(database.hostname) || process.env.PHOTO_BUCKET !== expected) throw new DomainError("INVALID_SERVER_CONFIGURATION", 500);
+    return expected;
+  }
+  if (database.pathname === "/wedding_test") return "wedding-photos-test";
+  const name = process.env.PHOTO_BUCKET ?? "wedding-photos-dev";
+  if (!["wedding-photos-test", "wedding-photos-dev"].includes(name)) throw new DomainError("INVALID_SERVER_CONFIGURATION", 500);
+  return name;
 }
 const invalid = () => new DomainError("INVALID_PHOTO", 422);
 const commandSchema = z.strictObject({

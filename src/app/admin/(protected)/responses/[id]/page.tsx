@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/server";
-import { requireOrganizer } from "@/features/organizer/auth";
+import { requireOrganizerPage } from "@/features/organizer/page-auth";
 import { readResponse } from "@/features/organizer/responses";
 import { ResponseEditor } from "@/features/organizer/ResponseEditor";
 import { readInvitation } from "@/features/wedding/repository";
@@ -11,7 +11,7 @@ export default async function ResponsePage({
   params: Promise<{ id: string }>;
 }) {
   const db = getDb(),
-    actor = await requireOrganizer(db),
+    actor = await requireOrganizerPage(db),
     { id } = await params;
   const party =
     id === "new"

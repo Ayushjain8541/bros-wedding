@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ContentSnapshot,
   WeddingSeed,
@@ -80,15 +80,29 @@ export function ContentEditor({ initial }: { initial: WeddingSeed }) {
       ...s,
       events: s.events.map((e, i) => (i === index ? { ...e, ...patch } : e)),
     }));
+  const reloadRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => reloadRequest.current?.abort(), []);
   async function reload() {
-    const response = await fetch("/api/admin/content", { cache: "no-store" });
+    if (busy) return;
+    reloadRequest.current?.abort();
+    const controller = new AbortController();
+    reloadRequest.current = controller;
+    setBusy(true);
+    try {
+    const response = await fetch("/api/admin/content", { cache: "no-store", signal: controller.signal });
     if (!response.ok) throw Error("Could not reload the published invitation.");
     const fresh = await response.json();
+    if (controller.signal.aborted || reloadRequest.current !== controller) return;
     setState(fresh);
     setBase(fresh);
     setStoryConfirm(false);
     setDeadlineConfirm(false);
-    return fresh;
+    setMessage("Published version reloaded.");
+    } catch (error) {
+      if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not reload the published invitation.");
+    } finally {
+      if (!controller.signal.aborted && reloadRequest.current === controller) { reloadRequest.current = null; setBusy(false); }
+    }
   }
   async function publish() {
     setBusy(true);
@@ -632,9 +646,7 @@ export function ContentEditor({ initial }: { initial: WeddingSeed }) {
               type="button"
               onClick={() => {
                 setError("");
-                void reload()
-                  .then(() => setMessage("Published version reloaded."))
-                  .catch((e) => setError(e.message));
+                void reload();
               }}
             >
               Reload published version (discard edits)

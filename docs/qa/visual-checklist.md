@@ -24,7 +24,11 @@ Task 4 implements the approved watercolor stationery direction. Private referenc
 - [ ] Use only authorized private storage delivery for personal photos; never copy personal photos into public/art.
 - [ ] Supply a verified venue photograph only if desired; no building image is currently displayed or implied to represent the venue.
 - [ ] Family approval of Hindi translation and any future ceremony copy, dress codes and venue sublocations.
-- [ ] Review original botanical decoration and delivery size (source PNG is approximately 1.97 MB); optimize asset delivery in the launch performance pass if appropriate.
+- [x] Botanical delivery uses a 922,356-byte lossless WebP (source PNG 1,970,368 bytes); decoded visible pixels compare equal. Source master retained.
 - [ ] Physical iPhone/Android and WhatsApp in-app browser checks, including large text, slow network, opening/skip/replay and telephone/map handoff.
 
 Desktop and mobile screenshots were captured in one initial batch and one bounded confirmation batch. The controller performs the independent visual review. Personal-content screenshots are not committed.
+
+## Task 12 release evidence
+
+Launch remains **UNAPPROVED**. `launch.spec.ts` captures English/Hindi at 320, 390, 768 and 1440 in Chromium and mobile WebKit under ignored `test-results/`. The bounded checks cover overflow, heading structure, keyboard opening/focus, reduced-motion bypass, no audio, 2027 synthetic date fixture and upright Hindi header typography. Header and cover Hindi now explicitly use normal font style. Final actual-art/content approval and physical WhatsApp browser checks remain UNVERIFIED. See `acceptance-matrix.md` and `content-approvals.md`.

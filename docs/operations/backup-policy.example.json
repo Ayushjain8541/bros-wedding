@@ -1,0 +1,17 @@
+{
+  "status": "PROPOSED_NOT_DEPLOYED",
+  "scheduleUtc": "00:00 daily",
+  "rpoHours": 24,
+  "rtoHours": 4,
+  "dailyCopies": 30,
+  "weeklyCopies": 12,
+  "monthlyCopies": 12,
+  "destination": "REQUIRES_APPROVED_PRIVATE_OFFHOST_DESTINATION",
+  "encryption": "AES-256-GCM; independent 96-bit nonce per object and manifest",
+  "keyStore": "SEPARATE_APPROVED_SECRET_STORE_REQUIRED",
+  "alertIfLastVerifiedCopyOlderThanHours": 24,
+  "restoreRehearsal": "monthly and after schema/auth/storage changes",
+  "schedulerVerified": false,
+  "offhostCopyVerified": false,
+  "retentionVerified": false
+}

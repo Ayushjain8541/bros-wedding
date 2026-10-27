@@ -11,7 +11,7 @@
 .coverContent { position: relative; width: min(100%, 620px); text-align: center; }
 .coverTitle { font-family: var(--font-heading); font-size: 2.3rem; font-style: italic; color: var(--color-coral-ink); margin: 0; }
 .coverNames { font-family: var(--font-heading); color: var(--color-ink); font-size: clamp(2rem, 4vw, 3rem); margin: .4rem 0 0; line-height: 1.25; }
-.botanical { position: absolute; pointer-events: none; background: url('/art/botanical-corner.png') left bottom / contain no-repeat; z-index: -1; }
+.botanical { position: absolute; pointer-events: none; background: url('/art/botanical-corner.webp') left bottom / contain no-repeat; z-index: -1; }
 .coverFlowers { width: min(34vw, 420px); height: 90%; bottom: 0; left: -3%; opacity: .85; }
 .navigation { display: flex; justify-content: center; flex-wrap: wrap; gap: .3rem clamp(.5rem, 2.3vw, 2rem); padding: .65rem 1rem; border-block: 1px solid #d7c6a780; background: var(--color-paper); }
 .navigation a { color: var(--color-muted); text-decoration: none; font-size: .78rem; min-height: 44px; display: flex; align-items: center; padding: .35rem; }
@@ -152,3 +152,5 @@
   .welcome h1:lang(hi) { font-size: 2rem; }
 }
 @media (prefers-reduced-motion: reduce) { .cover { display: none; } }
+
+:global(html[lang="hi"]) .headerTitle, :global(html[lang="hi"]) .coverTitle { font-style: normal; font-family: var(--font-body); }

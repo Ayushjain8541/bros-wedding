@@ -1,6 +1,7 @@
 # Invitation art provenance
 
 - `botanical-corner.png`: original decorative watercolor generated with OpenAI's built-in image-generation tool on 2026-10-27. The prompt requested a sparse asymmetric coral/peach rose and sage-leaf spray on true transparency, with no text, monogram, people, architecture, venue claims or vendor reference. No supplied reference image was uploaded. Decorative only; CSS backgrounds carry no content.
+- `botanical-corner.webp`: lossless WebP delivery derivative of the PNG, generated with Sharp 0.35.5; 922,356 bytes versus 1,970,368 bytes. Flattened decoded visible pixels compare byte-for-byte equal. The PNG remains the source master.
 - `placeholder.svg`: original neutral crop-mark geometry authored for this project. Accompanies explicit localized text; it never stands in for a real photograph.
 - The official monogram, main couple photograph, four supporting photos and venue photograph are not supplied. No replacement monogram or fabricated couple/venue image is used. Personal assets must be served through the authorized private-photo workflow, never placed in this public directory.
 
