@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import type {
@@ -43,6 +44,7 @@ export function ResponseEditor({
     [pending, setPending] = useState<ReturnType<
       typeof newCreateCommand
     > | null>(null);
+  const router = useRouter();
   const t = useTranslations("Errors");
   const decision = useWatch({ control: methods.control, name: "decision" });
   async function load(id: string) {
@@ -132,6 +134,7 @@ export function ResponseEditor({
               methods.reset(toForm(latest.response));
               setPending(null);
               setSaved(true);
+              if (!current) router.replace(`/admin/responses/${latest.id}`);
             } catch (error) {
               const problem =
                 error instanceof DomainError
