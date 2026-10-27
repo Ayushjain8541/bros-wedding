@@ -100,6 +100,6 @@ export async function createPartyFixture(groupId: GroupId, db: Database): Promis
   const token = randomBytes(32).toString('base64url');
   const saved = await createRsvp(guest, groupId, { requestId: randomUUID(), editToken: token, response: acceptedInput() }, db);
   const [session] = await db`insert into wedding.edit_sessions(submission_id,token_hash,expires_at) values(${saved.id},${createHash('sha256').update(randomBytes(32)).digest('hex')},clock_timestamp()+interval '1 day') returning id`;
-  const actor = {kind:'editor' as const, groupId, submissionId:saved.id, sessionId:session.id};
+  const actor = {kind:'editor' as const, groupId, submissionId:saved.id, sessionId:session.id, guestSessionId:guest.sessionId};
   return {actor, token, party:await readOwnRsvp(actor,db)};
 }

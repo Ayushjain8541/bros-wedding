@@ -54,6 +54,6 @@ export async function requireEditor(editCookie: string | undefined, guest: Guest
     `;
     if (!session) throw unauthenticated();
     if (session.group_id !== guest.groupId) throw new DomainError('forbidden', 403);
-    return { kind: 'editor', groupId: session.group_id, submissionId: session.submission_id, sessionId: session.id };
+    return { kind: 'editor', groupId: session.group_id, submissionId: session.submission_id, sessionId: session.id, guestSessionId: guest.sessionId };
   });
 }

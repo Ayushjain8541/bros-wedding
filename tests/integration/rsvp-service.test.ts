@@ -9,9 +9,9 @@ import { acceptedInput, declinedInput } from '../fixtures/wedding';
 import { createPartyFixture, seedGuestSession, withTestAdmin, withTestDb } from '../helpers/database';
 const command = () => ({ requestId: randomUUID(), editToken: randomBytes(32).toString('base64url'), response: acceptedInput() });
 async function open(db: Parameters<typeof createRsvp>[3]) { await db`update wedding.site_settings set new_rsvp_closes_at=clock_timestamp()+interval '1 day'`; }
-async function editor(id: string, groupId: EditorActor['groupId'], db: Parameters<typeof createRsvp>[3]): Promise<EditorActor> {
+async function editor(id: string, groupId: EditorActor['groupId'], guestSessionId: string, db: Parameters<typeof createRsvp>[3]): Promise<EditorActor> {
   const [row] = await db`insert into wedding.edit_sessions(submission_id,token_hash,expires_at) values(${id},${hashToken(randomBytes(32).toString('base64url'))},clock_timestamp()+interval '1 day') returning id`;
-  return { kind: 'editor', submissionId: id, groupId, sessionId: row.id };
+  return { kind: 'editor', submissionId: id, groupId, sessionId: row.id, guestSessionId };
 }
 describe('atomic RSVP services on restricted Postgres', () => {
   it('creates and reloads three guests; matching retries preserve identity, token hash and response', async () => withTestDb(async db => {
@@ -19,7 +19,7 @@ describe('atomic RSVP services on restricted Postgres', () => {
     const first = await createRsvp(actor, 'group-1', input, db);
     expect(first).toMatchObject({version:1, duplicateWarning:false, editPath:`/rsvp/edit#${input.editToken}`});
     expect(await createRsvp(actor, 'group-1', input, db)).toEqual(first);
-    const own = await readOwnRsvp(await editor(first.id,'group-1',db), db);
+    const own = await readOwnRsvp(await editor(first.id,'group-1',actor.sessionId,db), db);
     expect(own.response).toEqual(input.response);
     const [counts] = await db`select (select count(*)::int from wedding.rsvp_submissions) parties, (select count(*)::int from wedding.rsvp_guests) guests`;
     expect(counts).toEqual({ parties:1, guests:3 });
@@ -27,7 +27,7 @@ describe('atomic RSVP services on restricted Postgres', () => {
     expect(stored.edit_token_hash).toBe(hashToken(input.editToken));
     await expect(createRsvp(actor,'group-1',{...input,response:declinedInput()},db)).rejects.toMatchObject({code:'idempotency_conflict',status:409});
     await expect(createRsvp(actor,'group-1',{...input,editToken:command().editToken},db)).rejects.toMatchObject({status:409});
-    await updateRsvp(await editor(first.id,'group-1',db),first.id,{expectedVersion:1,response:declinedInput()},db);
+    await updateRsvp(await editor(first.id,'group-1',actor.sessionId,db),first.id,{expectedVersion:1,response:declinedInput()},db);
     await createRsvp(actor,'group-1',command(),db);
     expect(await createRsvp(actor,'group-1',input,db)).toEqual(first);
     await db`update wedding.site_settings set new_rsvp_closes_at=clock_timestamp()-interval '1 day'`;
@@ -93,10 +93,14 @@ describe('atomic RSVP services on restricted Postgres', () => {
   }));
   it('blocks cross-party reads/edits and revoked editor sessions; preserves cancelled selections until edited', async () => withTestDb(async db => {
     await open(db); const {actor,party}=await createPartyFixture('group-1',db);
-    const second=await createRsvp((await seedGuestSession('group-1',db)).actor,'group-1',command(),db);
+    const second=await createRsvp({kind:'guest',groupId:'group-1',sessionId:actor.guestSessionId},'group-1',command(),db);
     await expect(updateRsvp(actor,second.id,{expectedVersion:1,response:declinedInput()},db)).rejects.toMatchObject({status:403});
     await expect(readOwnRsvp({...actor,submissionId:second.id},db)).rejects.toMatchObject({status:403});
     await expect(readOwnRsvp({...actor,groupId:'group-2'},db)).rejects.toMatchObject({status:403});
+    await expect(readOwnRsvp({...actor,guestSessionId:undefined} as unknown as EditorActor,db)).rejects.toMatchObject({status:403});
+    await expect(readOwnRsvp({...actor,guestSessionId:randomUUID()},db)).rejects.toMatchObject({status:403});
+    const foreignGuest=await seedGuestSession('group-2',db);
+    await expect(readOwnRsvp({...actor,guestSessionId:foreignGuest.actor.sessionId},db)).rejects.toMatchObject({status:403});
     await db`update wedding.events set cancelled=true where id='haldi'`;
     expect((await readOwnRsvp(actor,db)).response).toMatchObject({eventIds:['haldi']});
     await expect(updateRsvp(actor,party.id,{expectedVersion:1,response:acceptedInput()},db)).rejects.toMatchObject({code:'forbidden_event'});
@@ -139,3 +143,17 @@ it('duplicates match only normalized primary contact phone or full name without 
   const parties=[party('a',' Asha  Jain ','+1 (202) 555-0123'),party('b','Ravi Jain','+12025550123'),party('c','asha jain','+12025550124'),party('d','Neha Jain','+12025550125')];
   expect(findDuplicateGroups(parties)).toEqual([{submissionIds:['a','b'],reason:'contact'},{submissionIds:['a','c'],reason:'name'}]);
 });
+
+// A previously verified editor must still possess its original guest authority at the read/write boundary.
+it.each(['expired','revoked','rotated'] as const)('rejects an editor whose original guest became %s before service authorization', async mode => withTestDb(async db => {
+  const {actor,party}=await createPartyFixture('group-1',db);
+  const [guest]=await db`select id from wedding.guest_sessions where group_id='group-1'`;
+  if(mode==='expired') await db`update wedding.guest_sessions set created_at=clock_timestamp()-interval '2 days',expires_at=clock_timestamp()-interval '1 day' where id=${guest.id}`;
+  else if(mode==='revoked') await db`update wedding.guest_sessions set revoked_at=clock_timestamp() where id=${guest.id}`;
+  else await db`update wedding.invitation_groups set rotated_at=clock_timestamp() where id='group-1'`;
+  await expect(readOwnRsvp(actor,db)).rejects.toMatchObject({status:403});
+  await expect(updateRsvp(actor,party.id,{expectedVersion:1,response:declinedInput()},db)).rejects.toMatchObject({status:403});
+  expect((await db`select version,decision from wedding.rsvp_submissions where id=${party.id}`)[0]).toEqual({version:1,decision:'accept'});
+  expect(await db`select * from wedding.rsvp_guests`).toHaveLength(3);
+  expect(await db`select * from wedding.rsvp_event_selections`).toHaveLength(1);
+}));

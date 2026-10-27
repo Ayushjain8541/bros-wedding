@@ -29,7 +29,7 @@ export type SiteSettings = { newRsvpClosesAt: string; helpPhone: string;
   helpTelUrl: string; helpWhatsAppUrl: string; maxPartySize: number };
 export type GuestActor = { kind: "guest"; groupId: GroupId; sessionId: string };
 export type EditorActor = { kind: "editor"; groupId: GroupId;
-  submissionId: string; sessionId: string };
+  submissionId: string; sessionId: string; guestSessionId: string };
 export type OrganizerActor = { kind: "organizer"; userId: string };
 export type WriteActor = GuestActor | EditorActor | OrganizerActor;
 export type PartySnapshot = { id: string; groupId: GroupId; version: number;

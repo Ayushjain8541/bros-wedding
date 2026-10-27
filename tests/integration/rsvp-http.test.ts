@@ -318,10 +318,42 @@ test('edit adapters reject forged guest attributes and store/log no raw tokens',
       await expect(exchangeEditToken(one.input.editToken,{...one.guest.actor,sessionId:randomUUID()},db)).rejects.toMatchObject({status:401});
       await expect(exchangeEditToken(one.input.editToken,{...one.guest.actor,groupId:'group-2'},db)).rejects.toMatchObject({status:401});
       const exchanged=await exchangeEditToken(one.input.editToken,one.guest.actor,db);
-      expect(await requireEditor(exchanged.sessionToken,one.guest.actor,db)).toMatchObject({kind:'editor',groupId:'group-1',submissionId:one.saved.id});
+      expect(await requireEditor(exchanged.sessionToken,one.guest.actor,db)).toMatchObject({kind:'editor',groupId:'group-1',submissionId:one.saved.id,guestSessionId:one.guest.actor.sessionId});
       await expect(requireEditor(exchanged.sessionToken,{...one.guest.actor,sessionId:randomUUID()},db)).rejects.toMatchObject({status:401});
       const rows=await db`select to_jsonb(e) as row from wedding.edit_sessions e union all select to_jsonb(r) from wedding.rsvp_submissions r`;
       for(const raw of [exchanged.sessionToken,one.input.editToken]) {expect(JSON.stringify(rows)).not.toContain(raw);expect(JSON.stringify([...logs.mock.calls,...errors.mock.calls,...warnings.mock.calls])).not.toContain(raw);}
     } finally {logs.mockRestore();errors.mockRestore();warnings.mockRestore();}
+  });
+});
+
+// Authentication before streaming cannot authorize a save after its guest credential is revoked.
+test.each(['expired', 'revoked', 'rotated'] as const)('paused PATCH denies a guest %s after initial authentication', async mode => {
+  await withTestDb(async db => {
+    const one = await fixture(db), session = await editor(one.cookie, one.input.editToken);
+    const guestsBefore = await db`select * from wedding.rsvp_guests order by position`;
+    const eventsBefore = await db`select * from wedding.rsvp_event_selections order by event_id`;
+    let stream!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({ start(controller) {
+      stream = controller;
+      controller.enqueue(Buffer.from('{"expectedVersion":1,"response":'));
+    } });
+    const pending = fetch(`${origin}/api/rsvp/current`, {
+      method:'PATCH', headers:{Origin:origin,'Content-Type':'application/json',Cookie:session.cookie},body,duplex:'half',
+    } as RequestInit);
+    let response!: Response;
+    try {
+      // PATCH consumes this second bucket only after both authenticators complete.
+      await vi.waitFor(async () => expect(await db`select key_hash from wedding.abuse_buckets`).toHaveLength(2));
+      if (mode === 'expired') await db`update wedding.guest_sessions set created_at=clock_timestamp()-interval '2 days',expires_at=clock_timestamp()-interval '1 day' where id=${one.guest.actor.sessionId}`;
+      else if (mode === 'revoked') await db`update wedding.guest_sessions set revoked_at=clock_timestamp() where id=${one.guest.actor.sessionId}`;
+      else await db`update wedding.invitation_groups set rotated_at=clock_timestamp() where id='group-1'`;
+    } finally {
+      stream.enqueue(Buffer.from(`${JSON.stringify(declinedInput())}}`)); stream.close();
+      response = await pending;
+    }
+    await error(response,403,'forbidden');
+    expect((await db`select version,decision from wedding.rsvp_submissions where id=${one.saved.id}`)[0]).toEqual({version:1,decision:'accept'});
+    expect(await db`select * from wedding.rsvp_guests order by position`).toEqual(guestsBefore);
+    expect(await db`select * from wedding.rsvp_event_selections order by event_id`).toEqual(eventsBefore);
   });
 });

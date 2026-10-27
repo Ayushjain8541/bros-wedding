@@ -45,6 +45,11 @@ async function authorize(actor:GuestActor|EditorActor|OrganizerActor, groupId:Gr
     const [session] = await tx`select id from wedding.guest_sessions where id=${actor.sessionId} and group_id=${groupId} and revoked_at is null and expires_at>clock_timestamp() and created_at>=${group.rotated_at} for share`;
     if (!session) throw denied();
   } else if (actor.kind === 'editor' && submissionId && actor.submissionId===submissionId) {
+    // Adapter authentication can precede a slow HTTP body. Revalidate both
+    // credentials here and retain group/guest/editor locks through read or save.
+    assertUuid(actor.guestSessionId);
+    const [guest] = await tx`select id from wedding.guest_sessions where id=${actor.guestSessionId} and group_id=${groupId} and revoked_at is null and expires_at>clock_timestamp() and created_at>=${group.rotated_at} for share`;
+    if (!guest) throw denied();
     const [session] = await tx`select id from wedding.edit_sessions where id=${actor.sessionId} and submission_id=${submissionId} and revoked_at is null and expires_at>clock_timestamp() for share`;
     if (!session) throw denied();
   } else throw denied();
