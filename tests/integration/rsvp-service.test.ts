@@ -129,13 +129,13 @@ describe('atomic RSVP services on restricted Postgres', () => {
     await db`insert into wedding.organizer_users(user_id) values(${actor.userId})`;
     await seedGuestSession('group-1',db);
     await expect(createRsvp(actor,'group-1',command(),db)).rejects.toMatchObject({code:'closed'});
-    await expect(createRsvp(actor,'group-1',command(),db,{reason:' ',source:'phone'})).rejects.toMatchObject({status:422});
+    await expect(createRsvp(actor,'group-1',command(),db,{reason:' ',source:'phone'})).rejects.toMatchObject({status:403});
     const saved=await createRsvp(actor,'group-1',command(),db,{reason:'Recorded by phone',source:'phone'});
     const [row]=await db`select source from wedding.rsvp_submissions where id=${saved.id}`; expect(row.source).toBe('phone');
     const [audit]=await db`select organizer_user_id,reason,details from wedding.audit_log where submission_id=${saved.id}`;
     expect(audit).toMatchObject({organizer_user_id:actor.userId,reason:'Recorded by phone',details:{source:'phone',deadlineOverride:true}});
     await updateRsvp(actor,saved.id,{expectedSubmissionId:saved.id,expectedVersion:1,response:declinedInput()},db);
-    expect(await db`select * from wedding.audit_log where submission_id=${saved.id}`).toHaveLength(2);
+    const audits=await db`select * from wedding.audit_log where submission_id=${saved.id} order by created_at`;expect(audits).toHaveLength(2);expect(audits[1].details).toMatchObject({source:'phone',deadlineOverride:false});
   }));
 });
 it('duplicates match only normalized primary contact phone or full name without merging',()=>{

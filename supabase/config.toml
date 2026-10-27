@@ -13,3 +13,6 @@ sql_paths = ["./seed.sql"]
 [storage]
 enabled = true
 file_size_limit = "10MiB"
+[auth]
+enable_signup = false
+enable_anonymous_sign_ins = false

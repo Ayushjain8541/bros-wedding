@@ -103,3 +103,21 @@ export async function createPartyFixture(groupId: GroupId, db: Database): Promis
   const actor = {kind:'editor' as const, groupId, submissionId:saved.id, sessionId:session.id, guestSessionId:guest.sessionId};
   return {actor, token, party:await readOwnRsvp(actor,db)};
 }
+
+/** Real local Auth provisioning; this helper is never imported by application code. */
+export async function seedOrganizer(db: Database): Promise<{cookieHeader:string;actor:import('@/features/wedding/types').OrganizerActor;email:string;password:string}> {
+  const service=new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+  if(!['localhost','127.0.0.1','[::1]'].includes(service.hostname))throw new Error('UNSAFE_TEST_AUTH');
+  const email=`organizer-${randomBytes(12).toString('hex')}@example.test`, password=randomBytes(32).toString('base64url');
+  const admin=createClient(service.href,process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false}});
+  const created=await admin.auth.admin.createUser({email,password,email_confirm:true});
+  if(created.error || !created.data.user)throw new Error('TEST_AUTH_PROVISION_FAILED');
+  const actor={kind:'organizer' as const,userId:created.data.user.id};
+  await db`insert into wedding.organizer_users(user_id) values(${actor.userId})`;
+  const {createServerClient}=await import('@supabase/ssr');
+  const jar=new Map<string,string>();
+  const client=createServerClient(service.href,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,{cookies:{getAll:()=>[],setAll:values=>{for(const c of values)jar.set(c.name,c.value);}}});
+  const login=await client.auth.signInWithPassword({email,password});
+  if(login.error)throw new Error('TEST_AUTH_LOGIN_FAILED');
+  return {cookieHeader:[...jar].map(([k,v])=>`${k}=${v}`).join('; '),actor,email,password};
+}

@@ -1,0 +1,116 @@
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 4vw, 3rem) 5rem;
+}
+.shell h1,
+.shell h2 {
+  font-family: var(--font-heading);
+  font-weight: 500;
+}
+.shell h1 {
+  font-size: clamp(2.5rem, 7vw, 4rem);
+  margin: 0.5rem 0;
+}
+.shell a {
+  color: var(--color-teal-ink);
+}
+.shell header {
+  border-bottom: 1px solid var(--color-gold-beige);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+.shell nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.shell form {
+  display: grid;
+  gap: 0.6rem;
+}
+.shell input,
+.shell select,
+.shell textarea {
+  max-width: 100%;
+  padding: 0.65rem;
+  border: 1px solid var(--color-sage);
+  border-radius: 0.4rem;
+  background: var(--color-ivory);
+  color: var(--color-ink);
+  font: inherit;
+}
+.shell button {
+  background: var(--color-teal-ink);
+  color: var(--color-ivory);
+  border: 1px solid var(--color-teal-ink);
+  border-radius: 0.4rem;
+  padding: 0.65rem 1rem;
+  font: inherit;
+  cursor: pointer;
+  justify-self: start;
+}
+.shell button:disabled {
+  opacity: 0.6;
+}
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  padding: 1rem;
+  background: var(--color-blush);
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.filters label {
+  display: grid;
+  gap: 0.3rem;
+}
+.scroll {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--color-gold-beige);
+}
+.badge {
+  font-size: 0.8rem;
+  background: var(--color-sage);
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  white-space: nowrap;
+}
+.editor {
+  max-width: 700px;
+}
+.editor fieldset {
+  border: 1px solid var(--color-gold-beige);
+  padding: 1rem;
+  margin-block: 1rem;
+}
+.editor h2 {
+  font-size: 1.75rem;
+}
+.alert {
+  background: var(--color-peach);
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+.actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-block: 1rem;
+}
+.login {
+  max-width: 420px;
+}
+.login input {
+  width: 100%;
+}

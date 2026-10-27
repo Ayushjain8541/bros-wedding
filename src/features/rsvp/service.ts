@@ -8,7 +8,7 @@ import { hashToken } from './token';
 import { validateRsvp } from './validation';
 
 type Tx = postgres.TransactionSql;
-type Override = {reason:string; source:'whatsapp'|'phone'};
+type Override = {reason?:string; source:'whatsapp'|'phone'};
 interface Submission {
   id:string; group_id:GroupId; version:number; payload_fingerprint:string; edit_token_hash:string; original_duplicate_warning:boolean;
   decision:'accept'|'decline'; contact_full_name:string; contact_phone:string;
@@ -86,22 +86,22 @@ async function duplicateWarning(id:string, tx:Tx):Promise<boolean> {
   const parties:PartySnapshot[]=rows.map(row=>({id:row.id,groupId:row.group_id,version:1,source:'website',response:{decision:'decline',contact:{fullName:row.contact_full_name,whatsapp:row.contact_phone}}}));
   return findDuplicateGroups(parties).some(group=>group.submissionIds.includes(id));
 }
-async function audit(actor:OrganizerActor,id:string,action:string,tx:Tx,override?:Override,deadlineOverride=false) {
-  await tx`insert into wedding.audit_log(organizer_user_id,submission_id,action,reason,details) values(${actor.userId},${id},${action},${override?.reason.trim() ?? null},${tx.json({source:override?.source ?? 'website',deadlineOverride})})`;
+async function audit(actor:OrganizerActor,id:string,action:string,tx:Tx,override?:Override,deadlineOverride=false,source:Submission['source']=override?.source ?? 'website') {
+  await tx`insert into wedding.audit_log(organizer_user_id,submission_id,action,reason,details) values(${actor.userId},${id},${action},${override?.reason?.trim() || null},${tx.json({source,deadlineOverride})})`;
 }
 /** Retry identity is immutable even if the saved party has subsequently been edited. */
 export async function createRsvp(actor:GuestActor|OrganizerActor,groupId:GroupId,command:CreateCommand,db:Database,override?:Override):Promise<SaveResult> {
   if (actor.kind!=='guest' && actor.kind!=='organizer') throw denied();
   if (override && actor.kind!=='organizer') throw denied();
   if (!command || !uuid.test(command.requestId) || !/^[A-Za-z0-9_-]{43}$/.test(command.editToken)) throw invalid();
-  if (override && (typeof override.reason!=='string' || !override.reason.trim() || override.reason.length>2000 || !['phone','whatsapp'].includes(override.source))) throw invalid();
+  if (override && ((override.reason!==undefined && (typeof override.reason!=='string' || override.reason.length>2000)) || !['phone','whatsapp'].includes(override.source))) throw invalid();
   return db.begin(async tx=>{
     const config=await settings(tx);
     await authorize(actor,groupId,tx);
     // Validate structure/normalization for fingerprint independently of mutable eligibility/limits.
     const allIds=await tx<{id:EventId}[]>`select id from wedding.events`;
     const normalized=validate(command.response,allIds.map(row=>row.id),200);
-    const fingerprint=hashToken(canonical({response:normalized,override:override ? {source:override.source,reason:override.reason.trim()} : null}));
+    const fingerprint=hashToken(canonical({response:normalized,override:override ? {source:override.source,reason:override.reason?.trim() || null} : null}));
     const tokenHash=hashToken(command.editToken);
     const [existing]=await tx<Submission[]>`select * from wedding.rsvp_submissions where group_id=${groupId} and request_id=${command.requestId} for update`;
     if (existing) {
@@ -109,7 +109,7 @@ export async function createRsvp(actor:GuestActor|OrganizerActor,groupId:GroupId
       return {id:existing.id,version:1,duplicateWarning:existing.original_duplicate_warning,editPath:`/rsvp/edit#${command.editToken}`};
     }
     const [{closed}]=await tx<{closed:boolean}[]>`select clock_timestamp() >= ${config.new_rsvp_closes_at} as closed`;
-    if (closed && !override) throw new DomainError('closed',403);
+    if (closed && !override?.reason?.trim()) throw new DomainError('closed',403);
     const response=validate(normalized,await eligible(tx,groupId),config.max_party_size);
     const [saved]=await tx<{id:string}[]>`insert into wedding.rsvp_submissions ${tx({...values(response),group_id:groupId,request_id:command.requestId,payload_fingerprint:fingerprint,edit_token_hash:tokenHash,source:override?.source ?? 'website'})} on conflict(edit_token_hash) do nothing returning id`;
     if (!saved) throw new DomainError('idempotency_conflict',409);
@@ -134,7 +134,7 @@ export async function updateRsvp(actor:EditorActor|OrganizerActor,submissionId:s
     const response=validate(command.response,await eligible(tx,row.group_id),config.max_party_size);
     await tx`update wedding.rsvp_submissions set ${tx(values(response))},version=version+1,updated_at=clock_timestamp() where id=${submissionId}`;
     await replaceChildren(submissionId,row.group_id,response,tx);
-    if (actor.kind==='organizer') await audit(actor,submissionId,'rsvp.update',tx);
+    if (actor.kind==='organizer') await audit(actor,submissionId,'rsvp.update',tx,undefined,false,row.source);
     return {id:submissionId,version:row.version+1,duplicateWarning:await duplicateWarning(submissionId,tx)};
   });
 }
