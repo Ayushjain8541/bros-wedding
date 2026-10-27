@@ -6,7 +6,7 @@
 
 Use the exact Node/pnpm/framework versions in README, a local PostgreSQL 17 client, and a running Supabase Auth/Storage service. Set `PG_BIN_DIR` to the existing native Postgres directory or install matching operator clients on the disposable CI host. Commands never print credentials, raw edit links, records or file contents. Keep shell tracing disabled, operator env files mode 0600, and their parent directories mode 0700.
 
-The application uses restricted `wedding_app`; the schema operator uses `DATABASE_ADMIN_URL`. Existing `wedding_dev`, `wedding_test` and vendor `postgres` must never be reset by a restore. Daily backups currently support the **verified local application DB names** `wedding_dev` and `wedding_test`, with their matching private buckets. Hosted backup connectivity and schema mapping are UNVERIFIED and must be implemented/rehearsed for the selected provider before launch. Do not weaken the restore target guard to accommodate production.
+The application uses restricted `wedding_app`; the schema operator uses `DATABASE_ADMIN_URL`. Existing `wedding_dev`, `wedding_test` and vendor `postgres` must never be reset by a restore. Backups default to the **verified local application DB names** `wedding_dev` and `wedding_test`, with their matching private buckets. An explicit hosted-source mode supports operator-configured PostgreSQL and private Supabase Storage with mandatory verified TLS/HTTPS. Actual selected-provider connectivity and recovery rehearsal remain UNVERIFIED. Restore targets are always isolated loopback test databases; hosted backup configuration cannot relax that boundary.
 
 Run from the repository with operator variables supplied from an approved secret store:
 
@@ -16,6 +16,17 @@ node scripts/restore.mjs --help
 node scripts/backup.mjs --destination /private/backup-root/2026-10-27T000000Z
 node scripts/restore.mjs --manifest /private/backup-root/2026-10-27T000000Z/manifest.enc --target wedding_restore_test_rehearsal
 ```
+
+For a hosted source, supply this complete **operator-only** configuration from the approved secret store (blank fields in `.env.example` are documentation, not defaults):
+
+- `BACKUP_SOURCE_MODE=hosted` and exact acknowledgment `BACKUP_HOSTED_SOURCE_ACK=I_APPROVE_THIS_HOSTED_BACKUP_SOURCE`.
+- `BACKUP_DATABASE_URL`: direct or session PostgreSQL connection URL; no query string/fragment. Use a provider endpoint supporting the long transaction and exported snapshot; transaction-mode poolers are not suitable. `BACKUP_EXPECTED_DATABASE` and `BACKUP_EXPECTED_DATABASE_USER` must match actual `current_database()` / `current_user` (the actual user can differ from a pooler routing username).
+- `BACKUP_SUPABASE_URL`: root HTTPS project URL, `BACKUP_SUPABASE_SECRET_KEY`: that source's server credential, and `BACKUP_PHOTO_BUCKET`: exact existing private bucket ID. Hosted mode never falls back to runtime/local secrets or buckets.
+- Optional `BACKUP_DATABASE_CA_FILE` and `BACKUP_STORAGE_CA_FILE`: PEM trust bundles if the provider uses a CA absent from standard trust. Node PostgreSQL explicitly requires certificate/hostname verification; `pg_dump` uses `sslmode=verify-full` and the selected CA (or PostgreSQL 17 system trust). Storage uses an explicit verified HTTPS client and never follows redirects. No insecure TLS switch exists. Inherited libpq host/service/TLS overrides are removed.
+
+Then run the same `backup.mjs --destination ...` command. Before export, actual DB name/user/TLS state, all 14 required `wedding` tables and their forced-RLS/non-app ownership, and exact bucket identity/privacy must match. Only `wedding` is dumped even when the hosted database is named `postgres`; vendor/Auth schemas are excluded. An incorrect identity/schema/private-bucket configuration fails instead of producing a plausible empty archive. `DATABASE_ADMIN_URL` and normal Supabase env still configure the **separate local restore target**, regardless of these hosted source variables.
+
+`BACKUP_OPERATION_TIMEOUT_MS` defaults to 120,000 ms (allowed 1,000–900,000). Storage requests have an absolute duration bound, response-size bound and no redirect following. Dump subprocesses are killed on timeout. Database connect time is capped at ten seconds; statement and idle-in-transaction timeouts are enforced by PostgreSQL, so stalled external work or a dead operator cannot keep the snapshot/publication locks indefinitely. Lock acquisition remains capped at ten seconds. Size the bounded window for the actual dataset and rehearse it; a timeout fails the backup and removes its incomplete destination. This is an operation bound, not a production RTO claim.
 
 The backup destination must be new. No script implicitly loads `.env.local`; the operator chooses the source environment. `BACKUP_ENCRYPTION_KEY` must be exactly 32 random bytes encoded as canonical base64. Recover this key **separately**, together with application DB credentials, Supabase server/publishable configuration, Auth identities/provider configuration, origin and rate-limit HMAC secret. The backup contains only application schema/data and published private photo bytes; it does not contain application secrets, encryption keys, the Supabase vendor database, Auth account passwords or provider configuration. Never put those values in argv, a ticket, public CI, Git or this runbook.
 

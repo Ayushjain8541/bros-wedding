@@ -39,11 +39,21 @@ export async function open(path, secret) {
   if(hash(bytes)!==envelope.metadata.sha256||bytes.length!==envelope.metadata.bytes)throw Error('CHECKSUM_MISMATCH');
   return {bytes,metadata:envelope.metadata};
 }
-export async function pg(tool, url, args) {
-  // Credentials go through the subprocess environment, never argv or diagnostic output.
-  const executable=process.env.PG_BIN_DIR ? join(process.env.PG_BIN_DIR,tool) : tool;
-  const env={...process.env,PGHOST:url.hostname,PGPORT:url.port||'5432',PGDATABASE:decodeURIComponent(url.pathname.slice(1)),PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGSSLMODE:'disable'};
-  await new Promise((resolve,reject)=>{const child=spawn(executable,args,{env,stdio:'ignore'});child.once('error',()=>reject(Error('POSTGRES_OPERATOR_BINARY_UNAVAILABLE')));child.once('exit',code=>code===0?resolve():reject(Error('POSTGRES_OPERATOR_COMMAND_FAILED')));});
+export async function runPg(tool, env, args, timeoutMs = 120_000) {
+  const executable = process.env.PG_BIN_DIR ? join(process.env.PG_BIN_DIR, tool) : tool;
+  await new Promise((resolve, reject) => {
+    const child = spawn(executable, args, { env, stdio: 'ignore' });
+    const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs);
+    child.once('error', () => { clearTimeout(timer); reject(Error('POSTGRES_OPERATOR_BINARY_UNAVAILABLE')); });
+    child.once('exit', code => { clearTimeout(timer); if (code === 0) resolve(); else reject(Error('POSTGRES_OPERATOR_COMMAND_FAILED')); });
+  });
+}
+export async function pg(tool, value, args) {
+  // Restore operations remain strictly loopback-only, regardless of hosted backup settings.
+  const url = localUrl(value.href);
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('PG')));
+  const env = { ...inherited, PGHOST:url.hostname, PGPORT:url.port||'5432', PGDATABASE:decodeURIComponent(url.pathname.slice(1)), PGUSER:decodeURIComponent(url.username), PGPASSWORD:decodeURIComponent(url.password), PGSSLMODE:'disable', PGCONNECT_TIMEOUT:'10' };
+  await runPg(tool, env, args);
 }
 export function args(allowed) {
   const out={};for(let i=2;i<process.argv.length;i++){const name=process.argv[i];if(!allowed.includes(name)||out[name])throw Error('INVALID_OPERATOR_ARGUMENT');out[name]=name==='--overwrite'?true:process.argv[++i];if(!out[name])throw Error('MISSING_OPERATOR_ARGUMENT');}return out;
