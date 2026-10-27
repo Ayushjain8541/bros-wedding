@@ -11,7 +11,7 @@ import { Celebrations } from './Celebrations';
 import { VenueHelp } from './VenueHelp';
 import styles from './Invitation.module.css';
 
-type Props = { content: ContentSnapshot; events: WeddingEvent[]; settings: SiteSettings; locale: Locale };
+type Props = { content: ContentSnapshot; events: WeddingEvent[]; settings: SiteSettings; locale: Locale; initiallyOpened?: boolean };
 function dateRange(content: ContentSnapshot, locale: Locale) {
   const formatter = new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
   return formatter.formatRange(new Date(`${content.wedding.startDate}T12:00:00+05:30`), new Date(`${content.wedding.endDate}T12:00:00+05:30`)).replace(/\s+/g, ' ');
@@ -28,9 +28,9 @@ export function Invitation(props: Props) {
     <InvitationDocument {...props} locale={locale} onLocaleChange={changeLocale}/>
   </NextIntlClientProvider>;
 }
-function InvitationDocument({ content, events, settings, locale, onLocaleChange }: Props & { onLocaleChange: (locale: Locale) => void }) {
+function InvitationDocument({ content, events, settings, locale, onLocaleChange, initiallyOpened }: Props & { onLocaleChange: (locale: Locale) => void }) {
   const t = useTranslations('Invitation');
-  const [cover, setCover] = useState(true);
+  const [cover, setCover] = useState(!initiallyOpened);
   const heading = useRef<HTMLHeadingElement>(null);
   const coverRef = useRef<HTMLDivElement>(null);
   const opened = useRef(false);
@@ -81,7 +81,7 @@ function InvitationDocument({ content, events, settings, locale, onLocaleChange 
       </section>
       <StoryCollage content={content} locale={locale}/>
       <Celebrations events={events} locale={locale} ceremonyCopyApproved={content.ceremonyCopyApproved}/>
-      <section className={`${styles.section} ${styles.response}`} aria-labelledby="response-title"><h2 id="response-title">{t('responseTitle')}</h2><p>{t('rsvpUnavailable')}</p><button type="button" disabled>{t('rsvpSoon')}</button></section>
+      <section className={`${styles.section} ${styles.response}`} aria-labelledby="response-title"><h2 id="response-title">{t('responseTitle')}</h2><p>{t('rsvpNote')}</p><a className={styles.textLink} href="/rsvp">{t('rsvp')}</a></section>
       <VenueHelp wedding={content.wedding} settings={settings} locale={locale}/>
     </main>
     <footer className={styles.footer}><p>{content.couple.displayName[locale]}</p><span>{dateRange(content, locale)}</span><button type="button" onClick={replay}>{t('replay')}</button></footer>

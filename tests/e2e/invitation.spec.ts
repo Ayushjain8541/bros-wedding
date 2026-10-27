@@ -33,7 +33,7 @@ test('responsive bilingual invitation keeps all authorized content and navigatio
     await expect(page.getByRole('link', { name: 'Call', exact: true })).toHaveAttribute('href', 'tel:+12025550123');
     await expect(page.getByRole('link', { name: 'WhatsApp', exact: true })).toHaveAttribute('href', 'https://wa.me/12025550123');
     await expect(page.getByRole('link', { name: 'Open map', exact: true })).toHaveAttribute('href', 'https://example.com/sample-venue');
-    await expect(page.getByRole('button', { name: 'RSVP — coming soon' })).toBeDisabled();
+    await expect(page.getByRole('link', { name: 'Send your response' })).toHaveAttribute('href', '/rsvp');
     await expect(page.locator('audio')).toHaveCount(0);
     await expect(page.getByText('Draft sample description awaiting approval.')).toHaveCount(0);
     for (const width of [320, 390, 768, 1440]) {

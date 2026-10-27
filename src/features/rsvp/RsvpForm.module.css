@@ -1,0 +1,240 @@
+.page {
+  min-height: 100vh;
+  padding: 0 1.25rem 3rem;
+  background: var(--color-ivory);
+}
+.header {
+  max-width: 72rem;
+  margin: auto;
+  padding: 1.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-sage);
+}
+.header a {
+  font-size: 0.875rem;
+}
+.sheet {
+  max-width: 44rem;
+  margin: 3.5rem auto 0;
+  padding: 0 2rem 2rem;
+}
+.sheet h1 {
+  color: var(--color-coral-ink);
+  font-size: clamp(2.6rem, 6vw, 4rem);
+  margin: 0 0 1.75rem;
+  text-align: center;
+}
+.sheet h2 {
+  color: var(--color-teal-ink);
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  margin: 0 0 0.75rem;
+}
+.sheet p {
+  margin: 0.5rem 0 1.5rem;
+}
+.sheet button {
+  min-height: 2.75rem;
+  padding: 0.65rem 1.35rem;
+  border: 1px solid var(--color-teal-ink);
+  border-radius: 0.3rem;
+  color: var(--color-paper);
+  background: var(--color-teal-ink);
+  cursor: pointer;
+}
+.sheet button:hover {
+  background: var(--color-teal);
+}
+.sheet button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.sheet button.secondary {
+  color: var(--color-teal-ink);
+  background: transparent;
+}
+.sheet button.secondary:hover {
+  background: var(--color-blush);
+}
+.step {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: 0;
+}
+.progress {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-sage);
+  padding-bottom: 0.65rem;
+}
+.field {
+  margin: 1.25rem 0;
+  min-width: 0;
+}
+.field label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.field input,
+.field select,
+.field textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.3rem;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  caret-color: var(--color-coral-ink);
+}
+.field textarea {
+  resize: vertical;
+}
+.field input::placeholder {
+  color: var(--color-muted);
+}
+.field [aria-invalid="true"] {
+  border-color: var(--color-coral-ink);
+}
+.sheet p.fieldError {
+  margin: 0.4rem 0 0;
+  color: var(--color-coral-ink);
+  font-size: 0.875rem;
+}
+.choices {
+  border: 0;
+  padding: 0;
+  margin: 2rem 0;
+  min-width: 0;
+}
+.choices legend {
+  margin-bottom: 0.75rem;
+}
+.choices label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  min-height: 3rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--color-sage);
+  cursor: pointer;
+}
+.choices input {
+  flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.3rem;
+  accent-color: var(--color-teal-ink);
+}
+.choices small {
+  display: block;
+  color: var(--color-muted);
+}
+.song {
+  border: 0;
+  padding: 0;
+  margin-top: 2rem;
+  min-width: 0;
+}
+.song legend {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  color: var(--color-teal-ink);
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+  border-top: 1px solid var(--color-sage);
+  padding-top: 1.5rem;
+}
+.summary {
+  margin: 1.5rem 0;
+}
+.summary > div {
+  border-bottom: 1px solid var(--color-sage);
+  padding: 1rem 0;
+}
+.summary dt {
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  margin-bottom: 0.3rem;
+}
+.summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.error {
+  color: var(--color-coral-ink);
+  margin-bottom: 1.5rem;
+}
+.editLink {
+  margin: 2rem 0;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-sage);
+}
+.editLink a {
+  display: inline-block;
+  margin: 0 1rem 1rem 0;
+}
+.breakWord {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.footer {
+  max-width: 40rem;
+  margin: 2rem auto 0;
+  border-top: 1px solid var(--color-sage);
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 540px) {
+  .page {
+    padding-inline: 1rem;
+  }
+  .sheet {
+    margin-top: 2rem;
+    padding-inline: 0;
+  }
+  .pair {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .header {
+    justify-content: center;
+  }
+  .actions button {
+    flex: 1 1 auto;
+  }
+}

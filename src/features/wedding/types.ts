@@ -35,7 +35,7 @@ export type WriteActor = GuestActor | EditorActor | OrganizerActor;
 export type PartySnapshot = { id: string; groupId: GroupId; version: number;
   response: ValidatedRsvp; source: "website" | "whatsapp" | "phone" };
 export type CreateCommand = { requestId: string; editToken: string; response: RsvpInput };
-export type EditCommand = { expectedVersion: number; response: RsvpInput };
+export type EditCommand = { expectedSubmissionId: string; expectedVersion: number; response: RsvpInput };
 export type SaveResult = { id: string; version: number; duplicateWarning: boolean;
   editPath?: string };
 

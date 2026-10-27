@@ -23,7 +23,9 @@ async function editor(cookie: string, raw: string) {
   const exchanged = await call('/api/rsvp/edit-session', 'POST', { token: raw }, cookie);
   expect(exchanged.status).toBe(200);
   const setCookie = exchanged.headers.get('set-cookie')!;
-  return { exchanged, setCookie, cookie: `${cookie}; ${setCookie.split(';')[0]}` };
+  const combined = `${cookie}; ${setCookie.split(';')[0]}`;
+  const current = await (await call('/api/rsvp/current', 'GET', undefined, combined)).json();
+  return { exchanged, setCookie, cookie: combined, submissionId: current.id as string };
 }
 async function error(response: Response, status: number, code?: string) {
   expect(response.status).toBe(status);
@@ -42,7 +44,7 @@ test('all RSVP reads/writes require real guest cookies and no guest listing/expo
     await error(unauthenticatedCreate, 401);
     for (const [path, method, body] of [
       ['/api/events', 'GET', undefined], ['/api/rsvp/edit-session', 'POST', { token: token() }],
-      ['/api/rsvp/current', 'GET', undefined], ['/api/rsvp/current', 'PATCH', { expectedVersion: 1, response: declinedInput() }],
+      ['/api/rsvp/current', 'GET', undefined], ['/api/rsvp/current', 'PATCH', { expectedSubmissionId:randomUUID(),expectedVersion: 1, response: declinedInput() }],
     ] as const) await error(await call(path, method, body), 401);
     await error(await call('/api/events', 'GET', undefined, 'wedding_guest=forged'), 401);
     const one = await fixture(db);
@@ -112,7 +114,7 @@ test('create, retry and exchange return only the authorized party and an HttpOnl
     expect(current.status).toBe(200); expect(current.headers.get('cache-control')).toContain('no-store');
     expect(await current.json()).toMatchObject({ id: saved.id, version: 1, groupId: 'group-1' });
     await error(await call(`/api/rsvp/current?id=${other.id}`, 'GET', undefined, session.cookie), 400);
-    await error(await call(`/api/rsvp/current?id=${other.id}`, 'PATCH', { expectedVersion: 1, response: declinedInput() }, session.cookie), 400);
+    await error(await call(`/api/rsvp/current?id=${other.id}`, 'PATCH', { expectedSubmissionId:session.submissionId,expectedVersion: 1, response: declinedInput() }, session.cookie), 400);
     await error(await call('/api/rsvp/current', 'GET', undefined, cookie), 401);
     const rows = await db`select to_jsonb(s) as row from wedding.rsvp_submissions s union all select to_jsonb(e) from wedding.edit_sessions e`;
     expect(JSON.stringify(rows)).not.toContain(raw); expect(JSON.stringify(rows)).not.toContain(input.editToken);
@@ -144,7 +146,7 @@ test('current response needs both valid guest and nonexpired, nonrevoked matchin
     await error(await call('/api/rsvp/current', 'GET', undefined, `wedding_guest=${two.cookie}; ${rawCookie}`), 403);
     await db`update wedding.edit_sessions set created_at=now()-interval '2 days',expires_at=now()-interval '1 day'`;
     await error(await call('/api/rsvp/current', 'GET', undefined, session.cookie), 401);
-    await error(await call('/api/rsvp/current', 'PATCH', {expectedVersion:1,response:declinedInput()}, session.cookie), 401);
+    await error(await call('/api/rsvp/current', 'PATCH', { expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput()}, session.cookie), 401);
     await db`update wedding.edit_sessions set expires_at=now()+interval '1 day',revoked_at=now()`;
     await error(await call('/api/rsvp/current', 'GET', undefined, session.cookie), 401);
     await db`update wedding.edit_sessions set revoked_at=null`;
@@ -164,10 +166,10 @@ test('strict commands reject forged actors, IDs, source, override and result-ver
       await error(await call('/api/rsvp', 'POST', { ...command(), [key]: { kind:'organizer',userId:randomUUID() } }, one.cookie), 400);
     }
     for (const key of ['actor', 'groupId', 'submissionId', 'deadlineOverride', 'source', 'version', 'override', 'requestId', 'editToken']) {
-      await error(await call('/api/rsvp/current', 'PATCH', { expectedVersion:1,response:declinedInput(),[key]:randomUUID() }, session.cookie), 400);
+      await error(await call('/api/rsvp/current', 'PATCH', { expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput(),[key]:randomUUID() }, session.cookie), 400);
     }
-    await error(await call('/api/rsvp/current','PATCH',{ expectedVersion:0,response:declinedInput() }, session.cookie),400);
-    await error(await call('/api/rsvp/current','PATCH',{ expectedVersion:1,response:{...declinedInput(),actor:'organizer'} }, session.cookie),422);
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:0,response:declinedInput() }, session.cookie),400);
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:{...declinedInput(),actor:'organizer'} }, session.cookie),422);
     expect((await db`select version from wedding.rsvp_submissions`)[0].version).toBe(1);
   });
 });
@@ -180,7 +182,7 @@ test('foreign and missing origins fail before any mutation or rate consumption',
     for (const Origin of ['https://evil.example', 'null', '']) {
       await error(await call('/api/rsvp','POST',command(),one.cookie,{Origin}),403,'FORBIDDEN_ORIGIN');
       await error(await call('/api/rsvp/edit-session','POST',{token:one.input.editToken},one.cookie,{Origin}),403,'FORBIDDEN_ORIGIN');
-      const foreignOriginEdit = await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:declinedInput()},session.cookie,{Origin});
+      const foreignOriginEdit = await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput()},session.cookie,{Origin});
       await error(foreignOriginEdit,403,'FORBIDDEN_ORIGIN');
     }
     expect(await db`select key_hash from wedding.abuse_buckets`).toHaveLength(0);
@@ -217,16 +219,16 @@ test('deadline blocks new creates while own edits retain identity and reject sta
     const one = await fixture(db,'group-2'), session = await editor(one.cookie,one.input.editToken);
     await db`update wedding.site_settings set new_rsvp_closes_at=clock_timestamp()-interval '1 second' where singleton`;
     await error(await call('/api/rsvp','POST',command(),one.cookie),403,'closed');
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:acceptedInput({eventIds:['mehendi']})},session.cookie),422,'forbidden_event');
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:acceptedInput({eventIds:['mehendi']})},session.cookie),422,'forbidden_event');
     await db`update wedding.events set cancelled=true where id='haldi'`;
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:acceptedInput()},session.cookie),422,'forbidden_event');
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:acceptedInput()},session.cookie),422,'forbidden_event');
     await db`update wedding.events set cancelled=false where id='haldi'`;
     await db`update wedding.site_settings set max_party_size=1 where singleton`;
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:acceptedInput()},session.cookie),422,'VALIDATION_FAILED');
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:acceptedInput({eventIds:[]})},session.cookie),422);
-    const changed = await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:declinedInput()},session.cookie);
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:acceptedInput()},session.cookie),422,'VALIDATION_FAILED');
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:acceptedInput({eventIds:[]})},session.cookie),422);
+    const changed = await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput()},session.cookie);
     expect(changed.status).toBe(200); expect(await changed.json()).toMatchObject({id:one.saved.id,version:2});
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:declinedInput()},session.cookie),409,'conflict');
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput()},session.cookie),409,'conflict');
     const current = await call('/api/rsvp/current','GET',undefined,session.cookie);
     expect(await current.json()).toMatchObject({id:one.saved.id,version:2,response:{decision:'decline'}});
     expect(await db`select * from wedding.rsvp_event_selections`).toHaveLength(0);
@@ -267,11 +269,11 @@ test('create guest-session limit survives renewal of the IP window', async () =>
 test('edit allows twenty attempts per edit session and refuses the twenty-first before writes', async () => {
   await withTestDb(async db => {
     const one=await fixture(db),session=await editor(one.cookie,one.input.editToken);
-    for(let i=1;i<=20;i++) expect((await call('/api/rsvp/current','PATCH',{expectedVersion:i,response:declinedInput()},session.cookie)).status).toBe(200);
-    await error(await call('/api/rsvp/current','PATCH',{expectedVersion:21,response:acceptedInput()},session.cookie),429,'RATE_LIMITED');
+    for(let i=1;i<=20;i++) expect((await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:i,response:declinedInput()},session.cookie)).status).toBe(200);
+    await error(await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:21,response:acceptedInput()},session.cookie),429,'RATE_LIMITED');
     expect((await db`select version,decision from wedding.rsvp_submissions`)[0]).toMatchObject({version:21,decision:'decline'});
     const fresh=await editor(one.cookie,one.input.editToken);
-    expect((await call('/api/rsvp/current','PATCH',{expectedVersion:21,response:declinedInput()},fresh.cookie)).status).toBe(200);
+    expect((await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:21,response:declinedInput()},fresh.cookie)).status).toBe(200);
   });
 });
 
@@ -295,7 +297,7 @@ test('actual database write failures return safe retryable 503 and a retry can s
       await admin.unsafe('create trigger fail_http before insert on wedding.edit_sessions for each row execute function wedding.fail_http_write()');
     });
     try {
-      for(const response of [await call('/api/rsvp','POST',input,one.cookie),await call('/api/rsvp/current','PATCH',{expectedVersion:1,response:declinedInput()},session.cookie),await call('/api/rsvp/edit-session','POST',{token:one.input.editToken},one.cookie)]) {
+      for(const response of [await call('/api/rsvp','POST',input,one.cookie),await call('/api/rsvp/current','PATCH',{ expectedSubmissionId:session.submissionId,expectedVersion:1,response:declinedInput()},session.cookie),await call('/api/rsvp/edit-session','POST',{token:one.input.editToken},one.cookie)]) {
         const body=await error(response,503,'RSVP_UNAVAILABLE');expect(JSON.stringify(body)).not.toContain('PRIVATE_DATABASE_FAILURE');expect(response.headers.get('retry-after')).toBe('5');
       }
       expect(await db`select id from wedding.rsvp_submissions`).toHaveLength(1);
@@ -335,7 +337,7 @@ test.each(['expired', 'revoked', 'rotated'] as const)('paused PATCH denies a gue
     let stream!: ReadableStreamDefaultController<Uint8Array>;
     const body = new ReadableStream<Uint8Array>({ start(controller) {
       stream = controller;
-      controller.enqueue(Buffer.from('{"expectedVersion":1,"response":'));
+      controller.enqueue(Buffer.from(`{"expectedSubmissionId":"${one.saved.id}","expectedVersion":1,"response":`));
     } });
     const pending = fetch(`${origin}/api/rsvp/current`, {
       method:'PATCH', headers:{Origin:origin,'Content-Type':'application/json',Cookie:session.cookie},body,duplex:'half',
@@ -357,3 +359,11 @@ test.each(['expired', 'revoked', 'rotated'] as const)('paused PATCH denies a gue
     expect(await db`select * from wedding.rsvp_event_selections order by event_id`).toEqual(eventsBefore);
   });
 });
+
+test('PATCH requires UUID identity precondition and cannot select a different party',async()=>withTestDb(async db=>{
+  const one=await fixture(db);const other=await createRsvp(one.guest.actor,'group-1',command(),db);const session=await editor(one.cookie,one.input.editToken);
+  for(const value of [undefined,null,'invalid',1])await error(await call('/api/rsvp/current','PATCH',{expectedSubmissionId:value,expectedVersion:1,response:declinedInput()},session.cookie),400,'INVALID_REQUEST');
+  await error(await call('/api/rsvp/current','PATCH',{expectedSubmissionId:other.id,expectedVersion:1,response:declinedInput()},session.cookie),409,'conflict');
+  expect((await db`select version,decision from wedding.rsvp_submissions order by id`)).toEqual([{version:1,decision:'accept'},{version:1,decision:'accept'}]);
+  const saved=await call('/api/rsvp/current','PATCH',{expectedSubmissionId:one.saved.id,expectedVersion:1,response:declinedInput()},session.cookie);expect(saved.status).toBe(200);expect(await saved.json()).toMatchObject({id:one.saved.id,version:2});
+}));

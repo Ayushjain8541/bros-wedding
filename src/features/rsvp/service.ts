@@ -123,13 +123,14 @@ export async function createRsvp(actor:GuestActor|OrganizerActor,groupId:GroupId
 export async function updateRsvp(actor:EditorActor|OrganizerActor,submissionId:string,command:EditCommand,db:Database):Promise<SaveResult> {
   if (actor.kind!=='editor' && actor.kind!=='organizer') throw denied();
   assertUuid(submissionId);
-  if (!command || !Number.isSafeInteger(command.expectedVersion) || command.expectedVersion<1) throw invalid();
+  if (!command || typeof command.expectedSubmissionId !== 'string' || !uuid.test(command.expectedSubmissionId) || !Number.isSafeInteger(command.expectedVersion) || command.expectedVersion<1) throw invalid();
   return db.begin(async tx=>{
     const config=await settings(tx);
     const [row]=await tx<Submission[]>`select * from wedding.rsvp_submissions where id=${submissionId} for update`;
     if (!row) throw denied();
     await authorize(actor,row.group_id,tx,submissionId);
-    if (row.version!==command.expectedVersion) throw new DomainError('conflict',409);
+    // Caller identity is a precondition only: the authenticated actor selected this row.
+    if (row.id!==command.expectedSubmissionId.toLowerCase() || row.version!==command.expectedVersion) throw new DomainError('conflict',409);
     const response=validate(command.response,await eligible(tx,row.group_id),config.max_party_size);
     await tx`update wedding.rsvp_submissions set ${tx(values(response))},version=version+1,updated_at=clock_timestamp() where id=${submissionId}`;
     await replaceChildren(submissionId,row.group_id,response,tx);

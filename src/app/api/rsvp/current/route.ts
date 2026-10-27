@@ -31,7 +31,8 @@ export async function PATCH(request: NextRequest) {
     if (request.nextUrl.search) throw new DomainError('INVALID_REQUEST', 400);
     const body = await readLimitedJson(request);
     if (!body || typeof body !== 'object' || Array.isArray(body)
-      || Object.keys(body).length !== 2
+      || Object.keys(body).length !== 3
+      || !('expectedSubmissionId' in body) || typeof body.expectedSubmissionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.expectedSubmissionId)
       || !('expectedVersion' in body) || !Number.isSafeInteger(body.expectedVersion) || (body.expectedVersion as number) < 1
       || !('response' in body)) throw new DomainError('INVALID_REQUEST', 400);
     return NextResponse.json(await updateRsvp(editor, editor.submissionId, body as EditCommand, db), { headers: privateHeaders });

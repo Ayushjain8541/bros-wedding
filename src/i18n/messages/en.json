@@ -48,7 +48,9 @@
     "rsvpSoon": "RSVP — coming soon",
     "helpNote": "For questions about the wedding or help with your visit, we’re happy to help.",
     "am": "AM",
-    "pm": "PM"
+    "pm": "PM",
+    "rsvp": "Send your response",
+    "rsvpNote": "Let us know who is coming and which celebrations you will join."
   },
   "Rsvp": {
     "title": "Your response",
@@ -80,7 +82,39 @@
     "edit": "Edit your response",
     "secureEdit": "Keep your secure edit link private.",
     "deadlineClosed": "New responses are now closed. Existing responses can still be edited.",
-    "duplicate": "A similar response may already exist. Please check your saved link."
+    "duplicate": "A similar response may already exist. Please check your saved link.",
+    "contactTitle": "Your contact details",
+    "contactNote": "One contact for your party. All fields are required unless marked optional.",
+    "decision": "Will you join us?",
+    "guestNote": "Include everyone attending, including yourself if you are coming.",
+    "partySize": "Number of guests",
+    "guestFullName": "Guest {number} full name",
+    "eventNote": "Choose every celebration your party will attend. Dates are in India Standard Time.",
+    "cancelled": "Cancelled",
+    "travelTitle": "Your stay & a little music",
+    "chooseTime": "Choose a time",
+    "optional": "Optional — leave all song fields blank to skip.",
+    "reviewNote": "Please check these details before sending your response.",
+    "savedNote": "Thank you. These are the details recorded for your party.",
+    "unavailableEvent": "Previously selected event",
+    "secureLink": "Open secure edit link",
+    "copyLink": "Copy edit link",
+    "copied": "Link copied",
+    "copyFailed": "Copy is unavailable here. Press and hold or right-click the secure edit link to copy it.",
+    "backInvitation": "Back to invitation",
+    "help": "Need help with your response?",
+    "contactHelp": "Message the wedding team",
+    "step": "Step {current} of {total}",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "retrySame": "Retry same response",
+    "reloadResponse": "Reload latest response",
+    "loadingSummary": "Your response was saved. Loading your recorded details…",
+    "summaryUnavailable": "Your response was saved, but we could not load the confirmation. Retry loading it, or use your secure edit link. Do not submit a new response.",
+    "closedHelp": "Please contact the wedding team for help, or use the secure link from your existing response.",
+    "loadingResponse": "Loading your saved response…",
+    "loadFailed": "We could not open your response",
+    "reopenInstructions": "Reopen your original invitation link first, then open your original secure edit link again. If this still fails, contact the wedding team."
   },
   "Errors": {
     "REQUIRED": "Please complete this field.",
@@ -94,7 +128,7 @@
     "FORBIDDEN": "This action is unavailable.",
     "CONFLICT": "This response has changed. Reload before saving.",
     "DEADLINE_PASSED": "The deadline for new responses has passed.",
-    "RATE_LIMITED": "Please wait a moment before trying again.",
+    "RATE_LIMITED": "Please wait 15 minutes before trying again.",
     "SAVE_FAILED": "Your response was not saved. Please try again.",
     "VALIDATION_FAILED": "Please check the highlighted fields.",
     "required": "Please complete this field.",
@@ -113,6 +147,11 @@
     "travel_too_long": "Your stay cannot exceed 366 nights. Please contact the wedding team for a longer stay.",
     "invalid_song": "Enter both the song name and artist.",
     "invalid_url": "Enter a valid HTTP or HTTPS link.",
-    "invalid_decision": "Choose whether you accept or decline."
+    "invalid_decision": "Choose whether you accept or decline.",
+    "UNCERTAIN": "We could not confirm the save. Retry this same response to check safely.",
+    "UNAVAILABLE": "This is temporarily unavailable. Please try again.",
+    "INVALID_REQUEST": "This request could not be processed. Please reload and try again.",
+    "REQUEST_TOO_LARGE": "Your response is too long. Please shorten your notes.",
+    "IDEMPOTENCY_CONFLICT": "This attempt already belongs to a different response. Open your secure edit link to check your saved details."
   }
 }
