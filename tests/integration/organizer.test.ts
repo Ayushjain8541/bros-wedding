@@ -101,6 +101,30 @@ test("real Auth enforces identity, allowlist, metadata distrust, cookie policy a
         .status,
     ).toBe(401);
   }));
+test("audited organizer can be revoked without losing history and existing Auth cookies cannot read or write", async () =>
+  withTestDb(async (db) => {
+    const organizer = await seedOrganizer(db);
+    await seedGuestSession("group-1", db);
+    const body = { groupId: "group-1", command: command(), source: "phone" };
+    const created = await call("/api/admin/responses", "POST", body, organizer.cookieHeader);
+    expect(created.status).toBe(201);
+    const { id } = await created.json();
+    const before = await db`select * from wedding.audit_log where organizer_user_id=${organizer.actor.userId}`;
+    expect(before).toHaveLength(1);
+    expect(before[0]).toMatchObject({ action: "rsvp.create", submission_id: id });
+
+    await db`delete from wedding.organizer_users where user_id=${organizer.actor.userId}`;
+    expect(await db`select * from wedding.audit_log where organizer_user_id=${organizer.actor.userId}`).toEqual(before);
+    for (const path of ["/api/admin/responses", `/api/admin/responses/${id}`, "/api/admin/metrics", "/api/admin/content"])
+      expect((await call(path, "GET", undefined, organizer.cookieHeader)).status).toBe(403);
+    expect((await call("/api/admin/responses", "POST", { ...body, command: command() }, organizer.cookieHeader)).status).toBe(403);
+    expect((await call(`/api/admin/responses/${id}`, "PATCH", {
+      expectedSubmissionId: id, expectedVersion: 1, response: declinedInput(),
+    }, organizer.cookieHeader)).status).toBe(403);
+    expect(await db`select id,version from wedding.rsvp_submissions`).toEqual([{ id, version: 1 }]);
+    expect(await db`select * from wedding.audit_log where organizer_user_id=${organizer.actor.userId}`).toEqual(before);
+  }));
+
 test("real organizer searches literal punctuation, stable 51-party pagination, filters, edits and audited manual override", async () =>
   withTestDb(async (db) => {
     const { cookieHeader, actor } = await seedOrganizer(db);

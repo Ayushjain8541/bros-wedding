@@ -1,4 +1,10 @@
 {
+  "Access": {
+    "title": "Private invitation",
+    "instructions": "Please open the invitation link shared with you by the family.",
+    "opening": "Opening your invitation…",
+    "failed": "This invitation link could not be opened. Please ask the family for a current link, or try again later."
+  },
   "Common": {
     "language": "Language",
     "english": "English",

@@ -128,7 +128,8 @@ create table wedding.edit_sessions (
 create index edit_sessions_submission_idx on wedding.edit_sessions(submission_id);
 create table wedding.audit_log (
   id uuid primary key default gen_random_uuid(),
-  organizer_user_id uuid references wedding.organizer_users(user_id),
+  -- Historical actor identity survives removal from the live organizer allowlist.
+  organizer_user_id uuid,
   submission_id uuid references wedding.rsvp_submissions(id) on delete set null,
   action text not null, reason text, details jsonb not null default '{}',
   created_at timestamptz not null default now()

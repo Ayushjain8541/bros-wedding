@@ -53,3 +53,26 @@ test('invalid fragment is erased and displays a safe failure without offering gr
     await expect(page.getByRole('combobox')).toHaveCount(0);
   });
 });
+
+test('Hindi gate and failed link honor a persistent public language choice without private content', async ({ page }) => {
+  await page.context().addCookies([{ name: 'locale', value: 'hi', url: 'http://127.0.0.1:3200' }]);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'निजी निमंत्रण' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'hi');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Private invitation' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Private invitation' })).toBeVisible();
+  await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
+  await page.goto('/invite#invalid-code');
+  await expect(page).toHaveURL('/invite');
+  await expect(page.getByRole('heading', { name: 'निजी निमंत्रण' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('परिवार से नया लिंक माँगें');
+  await expect(page.locator('[data-event-id]')).toHaveCount(0);
+  await expect(page.getByRole('combobox')).toHaveCount(0);
+  const html = await (await page.request.get('/invite')).text();
+  expect(html).not.toContain('Sample celebration');
+  expect(html).not.toContain('Sample Couple');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('Please ask the family for a current link');
+});

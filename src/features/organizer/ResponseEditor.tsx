@@ -22,6 +22,13 @@ import {
 import { newCreateCommand, errorMessageKey } from "@/features/rsvp/client";
 import { DomainError } from "@/lib/errors";
 import styles from "./Admin.module.css";
+type ManualCreate = {
+  groupId: GroupId;
+  command: ReturnType<typeof newCreateCommand>;
+  source: "phone" | "whatsapp";
+  overrideReason?: string;
+};
+type CommittedSave = { id: string; created: boolean };
 export function ResponseEditor({
   party,
   events,
@@ -41,9 +48,9 @@ export function ResponseEditor({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<DomainError | null>(null),
     [saved, setSaved] = useState(false),
-    [pending, setPending] = useState<ReturnType<
-      typeof newCreateCommand
-    > | null>(null);
+    [pending, setPending] = useState<ManualCreate | null>(null),
+    [uncertain, setUncertain] = useState(false),
+    [committed, setCommitted] = useState<CommittedSave | null>(null);
   const router = useRouter();
   const t = useTranslations("Errors");
   const decision = useWatch({ control: methods.control, name: "decision" });
@@ -53,6 +60,18 @@ export function ResponseEditor({
     });
     if (!result.ok) throw new DomainError("UNAVAILABLE", result.status);
     return (await result.json()) as PartySnapshot;
+  }
+  async function confirmSaved(target: CommittedSave) {
+    const latest = await load(target.id);
+    if (latest.id !== target.id) throw new DomainError("UNAVAILABLE", 503);
+    setCurrent(latest);
+    setGroup(latest.groupId);
+    methods.reset(toForm(latest.response));
+    setPending(null);
+    setUncertain(false);
+    setCommitted(null);
+    setSaved(true);
+    if (target.created) router.replace(`/admin/responses/${latest.id}`);
   }
   async function reload() {
     setBusy(true);
@@ -90,16 +109,26 @@ export function ResponseEditor({
             setError(null);
             setSaved(false);
             methods.clearErrors();
+            // A later rejection cannot disprove an earlier possible commit.
+            let mayHaveCommitted = uncertain || !!committed;
             try {
-              const command = current
+              if (committed) {
+                await confirmSaved(committed);
+                return;
+              }
+              const body = current
                 ? {
                     expectedSubmissionId: current.id,
                     expectedVersion: current.version,
                     response: toInput(values),
                   }
-                : (pending ?? newCreateCommand(toInput(values)));
-              if (!current)
-                setPending(command as ReturnType<typeof newCreateCommand>);
+                : (pending ?? {
+                    groupId: group,
+                    command: newCreateCommand(toInput(values)),
+                    source,
+                    ...(reason ? { overrideReason: reason } : {}),
+                  });
+              if (!current) setPending(body as ManualCreate);
               const result = await fetch(
                 current
                   ? `/api/admin/responses/${current.id}`
@@ -107,46 +136,29 @@ export function ResponseEditor({
                 {
                   method: current ? "PATCH" : "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(
-                    current
-                      ? command
-                      : {
-                          groupId: group,
-                          command,
-                          source,
-                          ...(reason ? { overrideReason: reason } : {}),
-                        },
-                  ),
+                  body: JSON.stringify(body),
                 },
               );
               const data = await result.json();
               if (!result.ok)
-                throw new DomainError(
-                  data.code,
-                  result.status,
-                  data.fieldErrors,
-                );
-              const latest = await load(data.id);
-              if (latest.id !== data.id)
+                throw new DomainError(data.code, result.status, data.fieldErrors);
+              if (typeof data.id !== "string")
                 throw new DomainError("UNAVAILABLE", 503);
-              setCurrent(latest);
-              setGroup(latest.groupId);
-              methods.reset(toForm(latest.response));
-              setPending(null);
-              setSaved(true);
-              if (!current) router.replace(`/admin/responses/${latest.id}`);
+              const target = { id: data.id, created: !current };
+              mayHaveCommitted = true;
+              setCommitted(target);
+              await confirmSaved(target);
             } catch (error) {
               const problem =
                 error instanceof DomainError
                   ? error
                   : new DomainError("NETWORK_ERROR", 0);
               setError(problem);
-              if (
-                problem.status >= 400 &&
-                problem.status < 500 &&
-                problem.status !== 409
-              )
-                setPending(null);
+              if (!current) {
+                if (mayHaveCommitted || problem.status < 400 || problem.status >= 500 || problem.status === 409)
+                  setUncertain(true);
+                else setPending(null);
+              }
               for (const [name, codes] of Object.entries(
                 problem.fieldErrors ?? {},
               ))
@@ -164,7 +176,7 @@ export function ResponseEditor({
           })}
         >
           {!current && (
-            <fieldset disabled={busy || !!pending}>
+            <fieldset disabled={busy || !!pending || !!committed}>
               <legend>Received reply</legend>
               <label htmlFor="group">Invitation group</label>
               <select
@@ -213,7 +225,7 @@ export function ResponseEditor({
               />
             </fieldset>
           )}
-          <fieldset disabled={busy || !!pending}>
+          <fieldset disabled={busy || !!pending || !!committed}>
             <legend>Response details</legend>
             <ContactStep onDecision={() => {}} />
             {decision === "accept" && (
@@ -232,12 +244,14 @@ export function ResponseEditor({
           {error && (
             <div role="alert" className={styles.alert}>
               <p>{t(errorMessageKey(error.code))}</p>
-              {error.status === 409 && current && (
+              {error.status === 409 && current && !committed && (
                 <button type="button" onClick={reload} disabled={busy}>
                   Reload latest response
                 </button>
               )}
-              {pending && (
+              {committed ? (
+                <p>The reply was saved. Reload its details to continue.</p>
+              ) : pending && (
                 <p>
                   Retry uses the same received reply to avoid creating it twice.
                 </p>
@@ -245,10 +259,12 @@ export function ResponseEditor({
             </div>
           )}
           {saved && <p role="status">Response saved.</p>}
-          <button disabled={busy || error?.status === 409}>
+          <button disabled={busy || (error?.status === 409 && !committed)}>
             {busy
               ? "Saving…"
-              : current
+              : committed
+                ? "Reload saved reply"
+                : current
                 ? "Save changes"
                 : pending
                   ? "Retry received reply"

@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 export function InviteExchange() {
+  const t = useTranslations("Access");
   const started = useRef(false);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -23,6 +25,6 @@ export function InviteExchange() {
       .catch(() => setFailed(true));
   }, []);
   return failed
-    ? <p role="alert">This invitation link could not be opened. Please ask the family for a current link, or try again later.</p>
-    : <p role="status">Opening your invitation…</p>;
+    ? <p role="alert">{t("failed")}</p>
+    : <p role="status">{t("opening")}</p>;
 }

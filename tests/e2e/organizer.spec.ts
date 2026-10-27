@@ -409,3 +409,76 @@ test("cancelled event retains its historical guest count with an accessible labe
     expect(metrics.status()).toBe(200);
     expect((await metrics.json()).eventGuests.haldi).toBe(3);
   }));
+
+test("lost committed manual POST survives a real 429 and retries without another party", async ({ page }) =>
+  withTestDb(async (db) => {
+    const organizer = await seedOrganizer(db);
+    await seedGuestSession("group-1", db);
+    await page.context().addCookies(organizer.cookieHeader.split("; ").map((pair) => {
+      const at = pair.indexOf("=");
+      return { name: pair.slice(0, at), value: pair.slice(at + 1), url: "http://127.0.0.1:3200" };
+    }));
+    await page.goto("/admin/responses/new");
+    await page.getByRole("textbox", { name: "Full name", exact: true }).fill("Asha Jain");
+    await page.getByRole("textbox", { name: /WhatsApp number/ }).fill("+12025550123");
+    await page.getByRole("radio", { name: "Regretfully declines" }).check();
+    const envelopes: string[] = [];
+    let id = "";
+    await page.route("**/api/admin/responses", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      envelopes.push(route.request().postData()!);
+      const response = await route.fetch();
+      if (envelopes.length === 1) {
+        expect(response.status()).toBe(201);
+        id = (await response.json()).id;
+        // Only this actor's write bucket exists (Auth cookies were seeded directly).
+        await db`update wedding.abuse_buckets set count=100`;
+        await route.abort("failed");
+      } else {
+        expect(response.status()).toBe(envelopes.length === 2 ? 429 : 201);
+        await route.fulfill({ response });
+      }
+    });
+    await page.getByRole("button", { name: "Save received reply", exact: true }).click();
+    await page.getByRole("button", { name: "Retry received reply", exact: true }).click();
+    await expect(page.locator("section form").getByRole("alert")).toContainText("wait 15 minutes");
+    await expect(page.getByLabel("Invitation group", { exact: true })).toBeDisabled();
+    await db`update wedding.abuse_buckets set window_start=clock_timestamp()-interval '16 minutes', expires_at=clock_timestamp()-interval '1 minute'`;
+    await page.getByRole("button", { name: "Retry received reply", exact: true }).click();
+    await expect(page).toHaveURL(`/admin/responses/${id}`);
+    expect(envelopes).toHaveLength(3);
+    expect(new Set(envelopes).size).toBe(1);
+    expect(await db`select id,version from wedding.rsvp_submissions`).toEqual([{ id, version: 1 }]);
+    expect(await db`select action from wedding.audit_log`).toEqual([{ action: "rsvp.create" }]);
+  }));
+
+test("confirmed manual POST with a failed summary recovers by GET only", async ({ page }) =>
+  withTestDb(async (db) => {
+    const organizer = await seedOrganizer(db);
+    await seedGuestSession("group-1", db);
+    await page.context().addCookies(organizer.cookieHeader.split("; ").map((pair) => {
+      const at = pair.indexOf("=");
+      return { name: pair.slice(0, at), value: pair.slice(at + 1), url: "http://127.0.0.1:3200" };
+    }));
+    await page.goto("/admin/responses/new");
+    await page.getByRole("textbox", { name: "Full name", exact: true }).fill("Asha Jain");
+    await page.getByRole("textbox", { name: /WhatsApp number/ }).fill("+12025550123");
+    await page.getByRole("radio", { name: "Regretfully declines" }).check();
+    let postCount = 0, readCount = 0;
+    page.on("request", (request) => {
+      if (request.url().endsWith("/api/admin/responses") && request.method() === "POST") postCount++;
+    });
+    await page.route("**/api/admin/responses/*", async (route) => {
+      readCount++;
+      if (readCount === 1) await route.fulfill({ status: 401, json: { code: "ACCESS_DENIED" } });
+      else await route.continue();
+    });
+    await page.getByRole("button", { name: "Save received reply", exact: true }).click();
+    await expect(page.locator("section form").getByRole("alert")).toBeVisible();
+    const [{ id }] = await db`select id from wedding.rsvp_submissions`;
+    await page.getByRole("button", { name: "Reload saved reply", exact: true }).click();
+    await expect(page).toHaveURL(`/admin/responses/${id}`);
+    expect(postCount).toBe(1);
+    expect(readCount).toBe(2);
+    expect(await db`select id,version from wedding.rsvp_submissions`).toEqual([{ id, version: 1 }]);
+  }));
