@@ -130,14 +130,23 @@ export function Dashboard({ events }: { events: WeddingEvent[] }) {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(metrics.eventGuests).map(([id, count]) => (
-                  <tr key={id}>
-                    <th scope="row">
-                      {events.find((e) => e.id === id)?.title.en ?? id}
-                    </th>
-                    <td>{count}</td>
-                  </tr>
-                ))}
+                {Object.entries(metrics.eventGuests).map(([id, count]) => {
+                  const event = events.find((e) => e.id === id);
+                  return (
+                    <tr key={id}>
+                      <th scope="row">
+                        {event?.title.en ?? id}
+                        {event?.cancelled && (
+                          <>
+                            {" "}
+                            <span className={styles.badge}>Cancelled</span>
+                          </>
+                        )}
+                      </th>
+                      <td>{count}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

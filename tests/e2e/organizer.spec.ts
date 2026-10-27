@@ -346,3 +346,66 @@ test("three guests become one in current dashboard and downloaded CSV; failed re
       .click();
     await expect(page.getByTestId("attending-guests")).toHaveText("1");
   }));
+
+test("cancelled event retains its historical guest count with an accessible label", async ({
+  page,
+}) =>
+  withTestDb(async (db) => {
+    const organizer = await seedOrganizer(db),
+      guest = await seedGuestSession("group-1", db);
+    const response = await page.request.post("/api/rsvp", {
+      headers: {
+        Origin: "http://127.0.0.1:3200",
+        Cookie: `wedding_guest=${guest.cookie}`,
+      },
+      data: {
+        requestId: randomUUID(),
+        editToken: randomBytes(32).toString("base64url"),
+        response: {
+          decision: "accept",
+          contact: { fullName: "Asha Jain", whatsapp: "+12025550123" },
+          guestNames: ["Asha Jain", "Ravi Jain", "Neha Jain"],
+          eventIds: ["haldi"],
+          travel: {
+            arrivalDate: "2027-02-12",
+            arrivalWindow: "noon-5pm",
+            departureDate: "2027-02-14",
+            departureWindow: "before-noon",
+          },
+        },
+      },
+    });
+    expect(response.status()).toBe(200);
+    await db`update wedding.events set cancelled=true where id='haldi'`;
+    await page.goto("/admin/login");
+    await page.getByLabel("Email", { exact: true }).fill(organizer.email);
+    await page.getByLabel("Password", { exact: true }).fill(organizer.password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByTestId("attending-guests")).toHaveText("3");
+    const eventTable = page.getByRole("table", {
+      name: "Guests by selected event",
+      exact: true,
+    });
+    const cancelledRow = eventTable
+      .getByRole("row")
+      .filter({
+        has: page.getByRole("rowheader", {
+          name: "Sample celebration 3 Cancelled",
+          exact: true,
+        }),
+      });
+    await expect(cancelledRow).toHaveCount(1);
+    await expect(
+      cancelledRow.getByText("Cancelled", { exact: true }),
+    ).toBeVisible();
+    await expect(cancelledRow.getByRole("cell")).toHaveText("3");
+    await expect(
+      eventTable.getByRole("rowheader", {
+        name: "Sample celebration 1",
+        exact: true,
+      }),
+    ).toHaveText("Sample celebration 1");
+    const metrics = await page.request.get("/api/admin/metrics");
+    expect(metrics.status()).toBe(200);
+    expect((await metrics.json()).eventGuests.haldi).toBe(3);
+  }));
