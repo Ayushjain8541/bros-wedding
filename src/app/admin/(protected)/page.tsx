@@ -1,3 +1,4 @@
+import { Dashboard } from "@/features/organizer/Dashboard";
 import { getDb } from "@/lib/db/server";
 import { requireOrganizer } from "@/features/organizer/auth";
 import {
@@ -19,5 +20,10 @@ export default async function ResponsesPage({
   const filters = parseAdminFilters(params),
     result = await listResponses(actor, filters, db);
   const { events } = await readInvitation("group-1", db);
-  return <ResponsesTable {...result} filters={filters} events={events} />;
+  return (
+    <>
+      <Dashboard events={events} />
+      <ResponsesTable {...result} filters={filters} events={events} />
+    </>
+  );
 }

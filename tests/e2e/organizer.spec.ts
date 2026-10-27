@@ -262,3 +262,87 @@ test("two consecutive manual creates keep distinct replies and reopen a fresh fo
       { action: "rsvp.create" },
     ]);
   }));
+
+test("three guests become one in current dashboard and downloaded CSV; failed refresh is explicit", async ({
+  page,
+}) =>
+  withTestDb(async (db) => {
+    const organizer = await seedOrganizer(db),
+      guest = await seedGuestSession("group-1", db);
+    const response = await page.request.post("/api/rsvp", {
+      headers: {
+        Origin: "http://127.0.0.1:3200",
+        Cookie: `wedding_guest=${guest.cookie}`,
+      },
+      data: {
+        requestId: randomUUID(),
+        editToken: randomBytes(32).toString("base64url"),
+        response: {
+          decision: "accept",
+          contact: { fullName: "Asha Jain", whatsapp: "+12025550123" },
+          guestNames: ["Asha Jain", "Ravi Jain", "Neha Jain"],
+          eventIds: ["haldi"],
+          travel: {
+            arrivalDate: "2027-02-12",
+            arrivalWindow: "noon-5pm",
+            departureDate: "2027-02-14",
+            departureWindow: "before-noon",
+          },
+        },
+      },
+    });
+    expect(response.status()).toBe(200);
+    const party = await response.json();
+    await page.goto("/admin/login");
+    await page.getByLabel("Email", { exact: true }).fill(organizer.email);
+    await page.getByLabel("Password", { exact: true }).fill(organizer.password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByTestId("attending-guests")).toHaveText("3");
+    await expect(page.getByTestId("guest-nights")).toHaveText("6");
+    await page
+      .getByRole("link", { name: "Edit response for Asha Jain" })
+      .click();
+    await page.locator("#party-size").selectOption("1");
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await expect(page.getByRole("status")).toHaveText("Response saved.");
+    await page
+      .getByRole("link", { name: "All responses", exact: true })
+      .click();
+    await expect(page.getByTestId("attending-guests")).toHaveText("1");
+    await expect(page.getByTestId("guest-nights")).toHaveText("2");
+    const downloadRequest = page.waitForEvent("download");
+    await page
+      .getByRole("link", { name: "Export guest CSV", exact: true })
+      .click();
+    const download = await downloadRequest;
+    expect(download.suggestedFilename()).toBe("wedding-guests.csv");
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+    const csv = Buffer.concat(chunks).toString("utf8");
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const rows = csv.trimEnd().split("\r\n");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toContain(party.id);
+    expect(rows[1]).toContain("Asha Jain");
+    expect(csv).not.toContain("Ravi Jain");
+    await page.route("**/api/admin/metrics", (route) =>
+      route.fulfill({ status: 503, json: { code: "RSVP_UNAVAILABLE" } }),
+    );
+    await page
+      .getByRole("button", { name: "Refresh totals", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("region", { name: "Attendance & stays" })
+        .getByRole("alert"),
+    ).toHaveText("Could not load current totals. Refresh totals to try again.");
+    await expect(page.getByTestId("attending-guests")).toHaveCount(0);
+    await page.unroute("**/api/admin/metrics");
+    await page
+      .getByRole("button", { name: "Refresh totals", exact: true })
+      .click();
+    await expect(page.getByTestId("attending-guests")).toHaveText("1");
+  }));

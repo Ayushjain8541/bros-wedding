@@ -170,3 +170,15 @@ export async function readResponse(
     return party;
   }) as Promise<PartySnapshot>;
 }
+
+/** Coherent full snapshot for aggregate/export reads; never reuse the 50-row listing. */
+export async function readAllResponses(
+  actor: OrganizerActor,
+  db: Database,
+): Promise<PartySnapshot[]> {
+  return db.begin("isolation level repeatable read read only", async (tx) => {
+    const sql = tx as unknown as Database;
+    await assertOrganizer(actor, sql);
+    return snapshots(sql);
+  }) as Promise<PartySnapshot[]>;
+}
