@@ -154,3 +154,10 @@
 @media (prefers-reduced-motion: reduce) { .cover { display: none; } }
 
 :global(html[lang="hi"]) .headerTitle, :global(html[lang="hi"]) .coverTitle { font-style: normal; font-family: var(--font-body); }
+
+/* Keep language and native skip usable above the opening, without taking the
+   header or document out of flow. Navigation retains its height at handoff. */
+.coverHeader { position: relative; z-index: 60; border-color: transparent; }
+.coverHeader .headerTitle { visibility: hidden; }
+.navigation[data-covered=true] { visibility: hidden; }
+.languages button { font-size: 14px; min-width: 44px; }

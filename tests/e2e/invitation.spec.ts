@@ -10,11 +10,11 @@ test('server-rendered dates hydrate without browser errors', async ({ page }) =>
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/invitation');
-    await page.getByRole('button', { name: /skip opening/i }).click();
+    await page.getByRole('link', { name: /skip opening/i }).click();
     await expect(page.locator('[data-event-id]')).toHaveCount(8);
     await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
     await page.reload();
-    await page.getByRole('button', { name: 'खुलने का एनीमेशन छोड़ें' }).click();
+    await page.getByRole('link', { name: 'खुलने का एनीमेशन छोड़ें' }).click();
     expect(errors).toEqual([]);
   });
 });
@@ -25,7 +25,7 @@ test('responsive bilingual invitation keeps all authorized content and navigatio
     const guest = await seedGuestSession('group-1', db);
     await page.context().addCookies([{ name: 'wedding_guest', value: guest.cookie, url: 'http://127.0.0.1:3200' }]);
     await page.goto('/invitation');
-    await page.getByRole('button', { name: /skip opening/i }).click();
+    await page.getByRole('link', { name: /skip opening/i }).click();
     await expect(page.locator('[data-event-id]')).toHaveCount(8);
     await expect(page.getByTestId('story-copy')).toHaveText("A sample story awaiting the family's approved private content.");
     await expect(page.getByTestId('families-copy')).toContainText('Sample families');
@@ -50,11 +50,11 @@ test('responsive bilingual invitation keeps all authorized content and navigatio
     }
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('lang', 'hi');
-    await page.getByRole('button', { name: 'खुलने का एनीमेशन छोड़ें' }).click();
+    await page.getByRole('link', { name: 'खुलने का एनीमेशन छोड़ें' }).click();
     await page.getByRole('button', { name: 'फिर से खोलें' }).click();
     await page.getByRole('button', { name: 'निमंत्रण खोलें' }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('button', { name: 'निमंत्रण खोलें' })).toHaveCount(0);
+    await expect(page.getByTestId('opening-scene')).toHaveCount(0, { timeout: 3200 });
   });
 });
 

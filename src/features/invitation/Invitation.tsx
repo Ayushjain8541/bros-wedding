@@ -1,10 +1,12 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import type { ContentSnapshot, Locale, SiteSettings, WeddingEvent } from '@/features/wedding/types';
 import en from '@/i18n/messages/en.json';
 import hi from '@/i18n/messages/hi.json';
-import { EnvelopeReveal } from './EnvelopeReveal';
+import { InvitationOpening } from './InvitationOpening';
+import { WelcomeHero } from './WelcomeHero';
+import paper from './paper-tokens.module.css';
 import { LanguageToggle } from './LanguageToggle';
 import { StoryCollage } from './StoryCollage';
 import { Celebrations } from './Celebrations';
@@ -32,48 +34,41 @@ function InvitationDocument({ content, events, settings, locale, onLocaleChange,
   const t = useTranslations('Invitation');
   const [cover, setCover] = useState(!initiallyOpened);
   const heading = useRef<HTMLHeadingElement>(null);
-  const coverRef = useRef<HTMLDivElement>(null);
+  const [revealed, setRevealed] = useState(Boolean(initiallyOpened));
   const opened = useRef(false);
-  const finish = useCallback(() => { opened.current = true; setCover(false); }, []);
+  const replaying = useRef(false);
+  const finish = useCallback(() => { opened.current = true; setRevealed(true); setCover(false); }, []);
+  const handoff = useCallback(() => setRevealed(true), []);
   useEffect(() => {
     if (!cover && opened.current) heading.current?.focus({ preventScroll: true });
-    if (!cover && opened.current) heading.current?.scrollIntoView({ block: 'start' });
+  }, [cover]);
+  useLayoutEffect(() => {
+    if (cover && replaying.current) {
+      // The opaque fixed layer is committed before we recenter its live document.
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      document.querySelector<HTMLButtonElement>('[data-testid="opening-scene"] button')?.focus({ preventScroll: true });
+      replaying.current = false;
+    }
   }, [cover]);
   function replay() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { heading.current?.focus(); return; }
-    setCover(true);
-    requestAnimationFrame(() => {
-      coverRef.current?.scrollIntoView({ block: 'start' });
-      coverRef.current?.querySelector('button')?.focus({ preventScroll: true });
-    });
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { heading.current?.focus({ preventScroll: true }); return; }
+    replaying.current = true;
+    setRevealed(false); setCover(true);
   }
   const families = content.families[locale].split(/\n\s*\n/);
-  return <div className={styles.invitation} lang={locale}>
-    <header className={styles.header}>
-      <a className={styles.skipLink} href="#welcome">{t('skipToContent')}</a>
-      <a className={styles.headerTitle} href="#welcome">{t('weddingInvitation')}</a>
+  return <div className={`${styles.invitation} ${paper.paperSurface}`} lang={locale}>
+    <header className={`${styles.header} ${cover ? styles.coverHeader : ''}`}>
+      <a className={styles.skipLink} href="/invitation?opened=1#welcome" onClick={event => { if (cover) { event.preventDefault(); finish(); } }}>{t('skipToContent')}</a>
+      <a className={styles.headerTitle} href="/invitation?opened=1#welcome" onClick={event => { if (cover) { event.preventDefault(); finish(); } }}>{t('weddingInvitation')}</a>
       <LanguageToggle locale={locale} onChange={onLocaleChange}/>
     </header>
-    {cover && <div ref={coverRef} className={styles.cover}>
-      <div className={`${styles.botanical} ${styles.coverFlowers}`} aria-hidden="true"/>
-      <div className={styles.coverContent}><p className={styles.coverTitle}>{t('invited')}</p><p className={styles.coverNames}>{content.couple.displayName[locale]}</p><EnvelopeReveal onOpen={finish}/></div>
-    </div>}
-    <nav className={styles.navigation} aria-label={t('navigation')}>
+    {cover && <InvitationOpening preview={{ names: content.couple.displayName[locale], dateLabel: dateRange(content, locale), venue: content.wedding.venueName[locale] }} onHandoff={handoff} onComplete={finish}/>}
+    <div inert={cover} data-document-covered={cover}>
+    <nav className={styles.navigation} data-covered={cover} aria-label={t('navigation')}>
       {(['welcome', 'families', 'story', 'celebrations', 'venue'] as const).map(id => <a key={id} href={`#${id}`}>{t(id)}</a>)}
     </nav>
     <main>
-      <section id="welcome" className={`${styles.section} ${styles.welcome}`} aria-labelledby="couple-title">
-        <div className={`${styles.botanical} ${styles.welcomeFlowersLeft}`} aria-hidden="true"/><div className={`${styles.botanical} ${styles.welcomeFlowersRight}`} aria-hidden="true"/>
-        <div className={styles.welcomeInner}>
-          <div className={styles.markPlaceholder}>{t('markPlaceholder')}</div>
-          <h1 ref={heading} tabIndex={-1} id="couple-title">{content.couple.displayName[locale]}</h1>
-          <p className={styles.welcomeCopy}>{content.welcome[locale]}</p>
-          <svg className={styles.flourish} viewBox="0 0 120 30" aria-hidden="true"><path d="M5 15h38m34 0h38M49 15q11-18 22 0-11 18-22 0Z"/></svg>
-          <p data-testid="wedding-date" className={styles.weddingDate}>{dateRange(content, locale)}</p>
-          <p className={styles.welcomeVenue}>{content.wedding.venueName[locale]}</p>
-          <a className={styles.textLink} href="#celebrations">{t('exploreCelebrations')} <span aria-hidden="true">↓</span></a>
-        </div>
-      </section>
+      <WelcomeHero content={content} locale={locale} dateLabel={dateRange(content, locale)} headingRef={heading} revealed={revealed}/>
       {locale === 'hi' && !content.hindiApproved && <p className={styles.draftNote}>{t('draftHindi')}</p>}
       <section id="families" className={`${styles.section} ${styles.families}`} aria-labelledby="families-title">
         <h2 id="families-title">{t('families')}</h2><p className={styles.sectionNote}>{t('familyBlessings')}</p>
@@ -85,5 +80,6 @@ function InvitationDocument({ content, events, settings, locale, onLocaleChange,
       <VenueHelp wedding={content.wedding} settings={settings} locale={locale}/>
     </main>
     <footer className={styles.footer}><p>{content.couple.displayName[locale]}</p><span>{dateRange(content, locale)}</span><button type="button" onClick={replay}>{t('replay')}</button></footer>
+    </div>
   </div>;
 }

@@ -51,7 +51,7 @@ test('2027 fixture layout, keyboard, upright Hindi and eight responsive evidence
     const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto('/invitation');
     await page.getByRole('button',{name:'Open invitation',exact:true}).focus();await page.keyboard.press('Enter');
-    await expect(page.getByRole('button',{name:'Open invitation',exact:true})).toHaveCount(0);
+    await expect(page.getByTestId('opening-scene')).toHaveCount(0,{timeout:3200});
     await expect(page.locator('[data-event-id]')).toHaveCount(8);
     await expect(page.getByTestId('wedding-date')).toHaveText(/12.*14 February 2027/);
     await expect(page.getByRole('link',{name:'Open map',exact:true})).toHaveAttribute('href','https://example.com/sample-venue');
@@ -70,7 +70,7 @@ test('2027 fixture layout, keyboard, upright Hindi and eight responsive evidence
         await page.locator('a[href="/rsvp"]').focus();
         await expect(page.locator('a[href="/rsvp"]')).toBeFocused();
         await page.evaluate(()=>window.scrollTo(0,0));
-        if(locale==='hi')expect(await page.locator('header a[href="#welcome"]').last().evaluate(e=>getComputedStyle(e).fontStyle)).toBe('normal');
+        if(locale==='hi')expect(await page.locator('header a[href="/invitation?opened=1#welcome"]').last().evaluate(e=>getComputedStyle(e).fontStyle)).toBe('normal');
         await page.screenshot({path:info.outputPath(`invitation-${locale}-${width}.png`),fullPage:true});
       }
     }

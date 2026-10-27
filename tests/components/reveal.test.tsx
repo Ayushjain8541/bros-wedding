@@ -1,59 +1,94 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { NextIntlClientProvider } from 'next-intl';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EnvelopeReveal } from '@/features/invitation/EnvelopeReveal';
 import { Invitation } from '@/features/invitation/Invitation';
-import en from '@/i18n/messages/en.json';
 import { CONTENT, EVENTS, SETTINGS } from '../fixtures/wedding';
 
-function media(reduced = false) {
-  vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: reduced, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
-}
-function reveal(onOpen = vi.fn()) {
-  render(<NextIntlClientProvider locale="en" messages={en}><EnvelopeReveal onOpen={onOpen}/></NextIntlClientProvider>);
-  return onOpen;
-}
-beforeEach(() => { media(); Element.prototype.scrollIntoView = vi.fn(); });
-describe('invitation opening', () => {
-  it('skip immediately opens, even after an artwork load error', async () => {
-    const user = userEvent.setup(); const onOpen = reveal();
+const motion = vi.hoisted(() => ({ hold: false, runs: [] as { stop: ReturnType<typeof vi.fn>; resolve: () => void }[] }));
+vi.mock('motion/react', async importOriginal => {
+  const actual = await importOriginal<typeof import('motion/react')>();
+  const React = await import('react');
+  return { useAnimate: () => {
+    const [scope, realAnimate] = actual.useAnimate();
+    const animate = React.useCallback((...args: Parameters<typeof realAnimate>) => {
+      if (!motion.hold) {
+        const controller = realAnimate(...args);
+        const stop = vi.spyOn(controller, 'stop');
+        motion.runs.push({ stop, resolve: () => {} });
+        return controller;
+      }
+      let resolve!: () => void;
+      const promise = new Promise<void>(done => { resolve = done; });
+      const stop = vi.fn();
+      motion.runs.push({ stop, resolve });
+      return Object.assign(promise, { stop });
+    }, [realAnimate]);
+    return [scope, animate];
+  } };
+});
+let reduced = false;
+let change: (() => void) | undefined;
+beforeEach(() => {
+  motion.hold = false; motion.runs.length = 0; reduced = false; change = undefined;
+  vi.stubGlobal('matchMedia', vi.fn(() => ({ get matches() { return reduced; }, addEventListener: (_: string, fn: () => void) => { change = fn; }, removeEventListener: vi.fn() })));
+  vi.stubGlobal('scrollTo', vi.fn());
+});
+function invitation() { return render(<Invitation content={CONTENT} events={EVENTS} settings={SETTINGS} locale="en"/>); }
+function open() { fireEvent.click(screen.getByRole('button', { name: 'Open invitation' })); }
+function skip() { fireEvent.click(screen.getByRole('link', { name: 'Skip opening animation' })); }
+describe('invitation opening lifecycle', () => {
+  it('uses a native skip destination and completes immediately after failed art', () => {
+    invitation();
+    const link = screen.getByRole('link', { name: 'Skip opening animation' });
+    expect(link).toHaveAttribute('href', '/invitation?opened=1#welcome');
     document.querySelectorAll('img').forEach(img => fireEvent.error(img));
-    await user.click(screen.getByRole('button', { name: /skip/i }));
-    expect(onOpen).toHaveBeenCalledTimes(1);
+    skip();
+    expect(screen.queryByTestId('opening-scene')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
   });
-  it.each(['{Enter}', ' '])('opens from the keyboard with %s within 1.8 seconds', async key => {
-    const user = userEvent.setup(); const onOpen = reveal();
-    screen.getByRole('button', { name: 'Open invitation' }).focus();
-    await user.keyboard(key);
-    await waitFor(() => expect(onOpen).toHaveBeenCalledTimes(1), { timeout: 1800 });
+  it('elapsed wall time alone cannot remove the scene; locale retains the active run', async () => {
+    motion.hold = true; vi.useFakeTimers();
+    invitation(); open();
+    const scene = screen.getByTestId('opening-scene');
+    const runs = motion.runs.length;
+    await act(() => vi.advanceTimersByTimeAsync(8000));
+    expect(screen.getByTestId('opening-scene')).toBe(scene);
+    fireEvent.click(screen.getByRole('button', { name: 'हिन्दी' }));
+    expect(screen.getByTestId('opening-scene')).toBe(scene);
+    expect(motion.runs).toHaveLength(runs);
+    expect(screen.getByRole('button', { name: 'आपका निमंत्रण खुल रहा है…' })).toBeInTheDocument();
+    vi.useRealTimers();
   });
-  it('allows immediate skip while the envelope is opening without double completion', async () => {
-    const user = userEvent.setup(); const onOpen = reveal();
-    await user.click(screen.getByRole('button', { name: 'Open invitation' }));
-    await user.click(screen.getByRole('button', { name: /skip/i }));
-    await new Promise(resolve => setTimeout(resolve, 1350));
-    expect(onOpen).toHaveBeenCalledTimes(1);
+  it('dynamic reduced motion cancels every pending controller and completes once', async () => {
+    invitation(); open();
+    const title = document.querySelector('h1')!;
+    const focus = vi.spyOn(title, 'focus');
+    act(() => { reduced = true; change?.(); });
+    expect(screen.queryByTestId('opening-scene')).not.toBeInTheDocument();
+    expect(motion.runs.every(run => run.stop.mock.calls.length > 0)).toBe(true);
+    await act(async () => { motion.runs.forEach(run => run.resolve()); });
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
   });
-  it('reduced motion bypasses the cover', async () => {
-    media(true); const onOpen = reveal();
-    await waitFor(() => expect(onOpen).toHaveBeenCalledTimes(1));
+  it('unmount cancels pending animation and restores only owned body styles', () => {
+    document.body.style.overflow = 'clip'; document.body.style.color = 'red';
+    const view = invitation(); open(); view.unmount();
+    expect(motion.runs.length).toBeGreaterThan(0);
+    expect(motion.runs.every(run => run.stop.mock.calls.length > 0)).toBe(true);
+    expect(document.body.style.overflow).toBe('clip');
+    expect(document.body.style.color).toBe('red');
+    document.body.removeAttribute('style');
   });
-  it('replays, switches locale without replacing content nodes, and keeps help usable', async () => {
-    const user = userEvent.setup();
-    render(<Invitation content={CONTENT} events={EVENTS} settings={SETTINGS} locale="en"/>);
-    await user.click(screen.getByRole('button', { name: /skip/i }));
+  it('replay and locale keep live content nodes and immediate skips reveal typography', () => {
+    invitation(); skip();
     const story = screen.getByTestId('story-copy');
-    expect(story.textContent).toBe(CONTENT.story.en);
-    await user.click(screen.getByRole('button', { name: 'हिन्दी' }));
+    const title = screen.getByRole('heading', { level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'हिन्दी' }));
     expect(screen.getByTestId('story-copy')).toBe(story);
     expect(story.textContent).toBe(CONTENT.story.hi);
-    expect(document.documentElement.lang).toBe('hi');
-    expect(document.cookie).toContain('locale=hi');
+    fireEvent.click(screen.getByRole('button', { name: 'फिर से खोलें' }));
+    fireEvent.click(screen.getByRole('link', { name: 'खुलने का एनीमेशन छोड़ें' }));
+    expect(screen.getByRole('heading', { level: 1 })).toBe(title);
+    expect(title.closest('[data-revealed]')).toHaveAttribute('data-revealed', 'true');
     expect(screen.getByRole('link', { name: 'कॉल करें' })).toHaveAttribute('href', SETTINGS.helpTelUrl);
-    await user.click(screen.getByRole('button', { name: 'फिर से खोलें' }));
-    expect(screen.getByRole('button', { name: 'निमंत्रण खोलें' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'खुलने का एनीमेशन छोड़ें' }));
-    expect(screen.getByTestId('story-copy')).toBe(story);
   });
 });

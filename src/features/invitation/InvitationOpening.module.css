@@ -1,0 +1,59 @@
+.scene { position: fixed; inset: 0; height: 100svh; z-index: 50; background: var(--paper-color); perspective: 1200px; }
+.scene::before, .hero::before { content: ''; position: absolute; inset: 0; background: url('/art/paper/surface.webp') center / cover; opacity: .16; pointer-events: none; }
+.camera { position: absolute; inset: 0; transform-origin: 0 0; transform-style: preserve-3d; pointer-events: none; }
+.envelope { position: absolute; width: var(--scene-envelope-width, min(88vw, 560px, calc((51svh - 128px) * 1.6))); aspect-ratio: 1.6; left: var(--scene-envelope-x, 50%); top: var(--scene-envelope-top, 49%); transform: translateX(-50%); transform-style: preserve-3d; }
+.back, .pocket, .fold, .seal { position: absolute; inset: 0; }
+.envelope img { display: block; width: 100%; height: 100%; }
+.back { z-index: 1; }
+.letter { position: absolute; left: 6.25%; top: 5%; width: 87.5%; height: 90%; z-index: 2; background: var(--paper-color); }
+.letter > img { position: absolute; inset: 0; }
+.letterPrint { position: absolute; inset: 14% 12%; display: flex; flex-direction: column; gap: 7%; align-items: center; text-align: center; font-family: var(--font-heading); font-size: clamp(11px, 1.2vw, 18px); color: var(--paper-teal-ink); }
+.letterPrint span:first-child { font-style: italic; font-size: 1.3em; }
+.pocket { z-index: 3; }
+.fold { z-index: 4; transform-origin: 50% 0; transform-style: preserve-3d; }
+.flapFront, .flapBack { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+/* Turn the reverse face around Y so its registered top edge stays at y=0.
+   An X turn would move the transparent canvas margin onto the hinge. */
+.flapBack { transform: rotateY(180deg); }
+.seal { z-index: 5; transform-origin: 50% 56%; }
+.coverPrint { position: absolute; top: 12%; left: 24px; right: 24px; text-align: center; }
+.coverPrint > p { margin: 0 auto; }
+.coverPrint > p:nth-child(2) { margin: .12em auto .08em; max-width: 1000px; }
+.coverDate { font-family: var(--font-heading); font-size: 20px; color: var(--paper-teal-ink); }
+.sprig { position: absolute; width: clamp(80px, calc(var(--scene-envelope-width, 350px) * .32), 180px); left: calc(var(--scene-envelope-x, 50%) + var(--scene-envelope-width, 350px) * .34); top: var(--scene-envelope-top, 49%); transform: rotate(20deg); pointer-events: none; }
+.sprig img, .heroSprig img { width: 100%; height: auto; display: block; }
+.openButton { position: absolute; width: var(--scene-envelope-width, min(88vw, 560px, calc((51svh - 128px) * 1.6))); aspect-ratio: 1.6; left: var(--scene-envelope-x, 50%); top: var(--scene-envelope-top, 49%); transform: translateX(-50%); border: 0; color: var(--paper-teal-ink); background: transparent; cursor: pointer; }
+.openButton > span { position: absolute; top: calc(100% + 12px); left: 0; width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 16px; }
+.openButton:focus-visible { outline-offset: 8px; }
+.skip { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; padding: 8px 16px; white-space: nowrap; color: var(--paper-teal-ink); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip: rect(0, 0, 0, 0); white-space: nowrap; overflow: hidden; }
+.clock { position: absolute; width: 1px; height: 1px; pointer-events: none; opacity: 0; }
+.hero { position: relative; background: var(--paper-color); min-height: calc(100svh - 76px); padding: 48px var(--paper-gutter) 64px; display: grid; place-items: center; text-align: center; isolation: isolate; }
+.heroCopy { position: relative; width: min(880px, 100%); }
+.hero[data-revealed=false] .heroCopy { opacity: 0; transform: translateY(12px); }
+:global([data-document-covered=true]) .hero[data-revealed=true] .heroCopy { animation: welcome-in 520ms var(--paper-ease-out) both; }
+.heroCopy h1 { margin: 16px auto 24px; font-weight: 400; outline-offset: 8px; }
+.welcomeKicker { margin: 0 auto 12px; color: var(--paper-teal-ink); }
+.markPlaceholder { display: inline-block; border-block: 1px solid var(--paper-rule); padding: 6px 12px; font-size: 11px; color: #63695e; }
+.welcomeCopy { margin: 0 auto; max-width: 44ch; }
+.rule { display: block; width: 60px; border-top: 1px solid var(--paper-rule); margin: 24px auto; }
+.weddingDate { font-family: var(--font-heading); font-size: 26px; margin: 0 0 6px; color: var(--paper-teal-ink); }
+.weddingDate:lang(hi) { font-family: var(--font-body); font-size: 20px; }
+.venue { margin: 0 auto 20px; font-size: 14px; }
+.explore { display: inline-flex; align-items: center; gap: 14px; padding: 8px; }
+.heroSprig { position: absolute; right: 2%; bottom: 3%; width: clamp(90px, 15vw, 210px); transform: rotate(-15deg); z-index: -1; }
+@keyframes welcome-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 767px) {
+  .coverPrint { top: 17%; }
+  .coverDate { font-size: 18px; margin-top: 8px !important; }
+  .hero { padding-block: 40px 56px; }
+  .heroSprig { right: -26px; bottom: 6px; width: 106px; }
+  .heroCopy h1 { margin-block: 20px; }
+}
+@media (max-height: 550px) and (min-width: 600px) {
+  .coverPrint { top: 90px; left: 24px; right: 55%; }
+  .coverPrint > p:nth-child(2) { font-size: clamp(2rem, 4vw, 3rem); }
+  .coverDate { font-size: 16px; }
+  .envelope, .openButton { width: var(--scene-envelope-width, min(42vw, 560px, calc((100svh - 206px) * 1.6))); left: var(--scene-envelope-x, 74%); top: var(--scene-envelope-top, 76px); }
+}
+@media (prefers-reduced-motion: reduce) { .scene { display: none; } .heroCopy { animation: none !important; } }
