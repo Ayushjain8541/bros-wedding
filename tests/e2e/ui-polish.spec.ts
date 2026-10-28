@@ -74,20 +74,29 @@ test('opening real motion, interruption, locale, resize and five fresh replays',
   });
 });
 
-test('opening native skip works without JavaScript', async ({ browser }) => {
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+test(`opening native skip works without JavaScript (${reducedMotion})`, async ({ browser }) => {
   await withTestDb(async db => {
     const guest = await seedGuestSession('group-1', db);
-    const context = await browser.newContext({ javaScriptEnabled: false });
+    const context = await browser.newContext({ javaScriptEnabled: false, reducedMotion, hasTouch: true, viewport: { width: 390, height: 844 } });
     await context.addCookies([{ name: 'wedding_guest', value: guest.cookie, url: origin }]);
     const page = await context.newPage();
     await page.goto(`${origin}/invitation`);
-    await skip(page).click();
+    await expect(skip(page)).toBeVisible();
+    await expect(skip(page)).toHaveAttribute('href', '/invitation?opened=1#welcome');
+    const box = await skip(page).boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await skip(page).tap();
     await expect(page).toHaveURL(/opened=1#welcome/);
     await expect(scene(page)).toHaveCount(0);
     await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('h1').locator('..')).toHaveCSS('opacity', '1');
+    await expect(page.locator('main').locator('..')).not.toHaveAttribute('inert', '');
     await context.close();
   });
 });
+}
 
 test('opening integrated synthetic scene proof at phone and desktop', async ({ browser }, info) => {
   test.setTimeout(120_000);

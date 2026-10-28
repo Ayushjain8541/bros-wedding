@@ -56,4 +56,6 @@
   .coverDate { font-size: 16px; }
   .envelope, .openButton { width: var(--scene-envelope-width, min(42vw, 560px, calc((100svh - 206px) * 1.6))); left: var(--scene-envelope-x, 74%); top: var(--scene-envelope-top, 76px); }
 }
-@media (prefers-reduced-motion: reduce) { .scene { display: none; } .heroCopy { animation: none !important; } }
+/* Keep the static scene and its native skip available without JavaScript.
+   With JavaScript, the reduced-motion listener immediately completes the scene. */
+@media (prefers-reduced-motion: reduce) { .heroCopy { animation: none !important; } }
